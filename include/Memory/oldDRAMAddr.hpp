@@ -49,10 +49,6 @@ class DRAMAddr {
   size_t row{};
   size_t col{};
 
-  int channel = -1;
-  int rank = -1;
-  int bank_group = -1;
-
   // class methods
   static void set_base_msb(void *buff);
 

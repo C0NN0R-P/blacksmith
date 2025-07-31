@@ -1,6 +1,7 @@
 #include "Memory/Memory.hpp"
 
 #include <sys/mman.h>
+#include <iostream>
 
 /// Allocates a MEM_SIZE bytes of memory by using super or huge pages.
 void Memory::allocate_memory(size_t mem_size) {
@@ -19,6 +20,7 @@ void Memory::allocate_memory(size_t mem_size) {
     auto mapped_target = mmap((void *) start_address, MEM_SIZE, PROT_READ | PROT_WRITE,
         MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (30UL << MAP_HUGE_SHIFT), fileno(fp), 0);
     if (mapped_target==MAP_FAILED) {
+      std::cout << "MEM_SIZE = " << MEM_SIZE << ", huge shift = " << (30UL << MAP_HUGE_SHIFT) << std::endl;
       perror("mmap");
       exit(EXIT_FAILURE);
     }

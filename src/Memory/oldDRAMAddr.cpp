@@ -40,48 +40,15 @@ DRAMAddr::DRAMAddr(size_t bk, size_t r, size_t c) {
 }
 
 DRAMAddr::DRAMAddr(void *addr) {
-{
-    // Kernel module-based decoding logic
-    this->col = reinterpret_cast<size_t>(addr) & 0x3FF;
-    unsigned long long virt = reinterpret_cast<unsigned long long>(addr);
-    FILE *pagemap = fopen("/proc/self/pagemap", "rb");
-    if (!pagemap) { perror("fopen pagemap"); exit(1); }
-    unsigned long long offset = (virt / getpagesize()) * sizeof(uint64_t);
-    if (fseek(pagemap, offset, SEEK_SET) != 0) { perror("fseek"); exit(1); }
-    uint64_t phys_entry;
-    fread(&phys_entry, sizeof(uint64_t), 1, pagemap);
-    fclose(pagemap);
-    if (!(phys_entry & (1ULL << 63))) { fprintf(stderr, "Page not present\n"); exit(1); }
-    unsigned long long pfn = phys_entry & ((1ULL << 55) - 1);
-    unsigned long long phys_addr = (pfn * getpagesize()) + (virt & (getpagesize() - 1));
-
-    FILE *f = fopen("/sys/module/skx_decode/parameters/phys_addr", "w");
-    if (!f) { perror("fopen phys_addr"); exit(1); }
-    fprintf(f, "%llu", phys_addr);
-    fclose(f);
-
-    usleep(1000);
-    f = fopen("/proc/addr_decode", "r");
-    if (!f) { perror("fopen addr_decode"); exit(1); }
-    char buf[256];
-    fgets(buf, sizeof(buf), f);
-    fclose(f);
-
-    int ch = -1, rk = -1, bg = -1, bk = -1, row_val = -1, col_val = -1;
-    sscanf(buf, "addr=%*x socket=%*d imc=%*d channel=%d dimm=%*d rank=%d row=%d col=%d bank=%d bg=%d",
-       &ch, &rk, &row_val, &col_val, &bk, &bg);
-
-    this->channel = ch;
-    this->rank = rk;
-    this->bank_group = bg;
-    this->bank = (bg << 2) | bk;
-    this->row = row_val;
-    this->col = col_val;
-    return;
-}
- // bank = (res >> MemConfig.BK_SHIFT) & MemConfig.BK_MASK;
- // row = (res >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
- // col = (res >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
+  auto p = (size_t) addr;
+  size_t res = 0;
+  for (unsigned long i : MemConfig.DRAM_MTX) {
+    res <<= 1ULL;
+    res |= (size_t) __builtin_parityl(p & i);
+  }
+  bank = (res >> MemConfig.BK_SHIFT) & MemConfig.BK_MASK;
+  row = (res >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
+  col = (res >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
 }
 
 size_t DRAMAddr::linearize() const {

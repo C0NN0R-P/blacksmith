@@ -49,10 +49,10 @@ int check_cpu() {
     cpu_supported |= (cpu_model.find(model) != std::string::npos);
   }
 
-  if (!cpu_supported) {
-    Logger::log_error("CPU model is not supported. You need to run DRAMA to update the DRAM address matrices. See the README.md for details.");
-    exit(EXIT_FAILURE);
-  }
+ // if (!cpu_supported) {
+ //   Logger::log_error("CPU model is not supported. You need to run DRAMA to update the DRAM address matrices. See the README.md for details.");
+ //   exit(EXIT_FAILURE);
+ // }
 
   return cpu_supported;
 }
