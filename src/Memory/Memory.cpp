@@ -9,7 +9,7 @@ void Memory::allocate_memory(size_t mem_size) {
   volatile char *target = nullptr;
   FILE *fp;
 
-  if (superpage) {
+ /* if (superpage) {
     // allocate memory using super pages
     fp = fopen(hugetlbfs_mountpoint.c_str(), "w+");
     if (fp==nullptr) {
@@ -25,15 +25,15 @@ void Memory::allocate_memory(size_t mem_size) {
       exit(EXIT_FAILURE);
     }
     target = (volatile char*) mapped_target;
-  } else {
+  } else {*/
     // allocate memory using huge pages
-    assert(posix_memalign((void **) &target, MEM_SIZE, MEM_SIZE)==0);
-    assert(madvise((void *) target, MEM_SIZE, MADV_HUGEPAGE)==0);
-    memset((char *) target, 'A', MEM_SIZE);
-    // for khugepaged
-    Logger::log_info("Waiting for khugepaged.");
-    sleep(10);
-  }
+  assert(posix_memalign((void **) &target, MEM_SIZE, MEM_SIZE)==0);
+  assert(madvise((void *) target, MEM_SIZE, MADV_HUGEPAGE)==0);
+  memset((char *) target, 'A', MEM_SIZE);
+  // for khugepaged
+  Logger::log_info("Waiting for khugepaged.");
+  sleep(10);
+  //}
 
   if (target!=start_address) {
     Logger::log_error(format_string("Could not create mmap area at address %p, instead using %p.",
