@@ -12,8 +12,6 @@
 #include <cassert>
 #include <vector>
 #include <set>
-#include <map>
-#include <tuple>
 #include <sstream>
 #include <cstdlib>
 
@@ -28,22 +26,18 @@ char* find_matching_address_pair(size_t mem_size, char*& match_out) {
   assert(posix_memalign((void**)&region, pagesize, mem_size) == 0);
   memset((char*)region, 'A', mem_size);
 
-  std::map<std::tuple<int, int, int>, std::vector<char*>> bank_map;
-
   for (size_t i = 0; i < num_pages; ++i) {
-    char* addr = region + i * pagesize;
-    DRAMAddr d(addr);
-    auto key = std::make_tuple(d.channel, d.rank, d.bank);
-    bank_map[key].push_back(addr);
-  }
-
-  for (const auto& [key, vec] : bank_map) {
-    if (vec.size() >= 2) {
-      match_out = vec[1];
-      return vec[0];
+    void* a1 = (void*)(region + i * pagesize);
+    DRAMAddr d1(a1);
+    for (size_t j = i + 1; j < num_pages; ++j) {
+      void* a2 = (void*)(region + j * pagesize);
+      DRAMAddr d2(a2);
+      if (d1.channel == d2.channel && d1.rank == d2.rank && d1.bank == d2.bank) {
+        match_out = region + j * pagesize;
+        return region + i * pagesize;
+      }
     }
   }
-
   std::cerr << "Could not find address pair in same bank." << std::endl;
   exit(EXIT_FAILURE);
 }
@@ -133,4 +127,3 @@ size_t Memory::check_memory_internal(PatternAddressMapper& /*mapper*/, const vol
   }
   return flips;
 }
-
