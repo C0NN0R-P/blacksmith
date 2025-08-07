@@ -14,7 +14,7 @@ void DramAnalyzer::find_bank_conflicts() {
     auto a2 = start_address + (dist(gen)%(MEM_SIZE/64))*64;
     auto ret1 = measure_time(a1, a2);
     auto ret2 = measure_time(a1, a2);
-    std::cout << "ret1 init: " << ret1 << ", ret2 init: " << ret2 << std::endl;
+    //std::cout << "ret1 init: " << ret1 << ", ret2 init: " << ret2 << std::endl;
 
 
     if ((ret1 > THRESH) && (ret2 > THRESH)) {
@@ -26,8 +26,8 @@ void DramAnalyzer::find_bank_conflicts() {
           auto bank = banks.at(i);
           ret1 = measure_time(a1, bank[0]);
           ret2 = measure_time(a2, bank[0]);
-          std::cout << "a1: " << a1 << ", a2: " << a2 << std::endl;
-	  std::cout << "ret1: " << ret1 << ", ret2: " << ret2 << std::endl;
+         // std::cout << "a1: " << a1 << ", a2: " << a2 << std::endl;
+	 // std::cout << "ret1: " << ret1 << ", ret2: " << ret2 << std::endl;
           if ((ret1 > THRESH) || (ret2 > THRESH)) {
             // possibly noise if only exactly one is true,
             // i.e., (ret1 > THRESH) or (ret2 > THRESH)
