@@ -67,6 +67,7 @@ add_library(
         src/Memory/DRAMAddr.cpp
         src/Memory/DramAnalyzer.cpp
         src/Memory/Memory.cpp
+        src/Memory/SkxDecode.cpp
         src/Utilities/Enums.cpp
         src/Utilities/Logger.cpp
 )

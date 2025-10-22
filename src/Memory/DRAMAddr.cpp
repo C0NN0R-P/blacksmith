@@ -1,5 +1,6 @@
 #include "Memory/DRAMAddr.hpp"
 #include "GlobalDefines.hpp"
+#include "Memory/SkxDecode.hpp"
 
 // initialize static variable
 std::map<size_t, MemConfiguration> DRAMAddr::Configs;
@@ -39,7 +40,7 @@ DRAMAddr::DRAMAddr(size_t bk, size_t r, size_t c) {
   col = c;
 }
 
-DRAMAddr::DRAMAddr(void *addr) {
+/*DRAMAddr::DRAMAddr(void *addr) {
 {
     // Kernel module-based decoding logic
     this->col = reinterpret_cast<size_t>(addr) & 0x3FF;
@@ -82,7 +83,36 @@ DRAMAddr::DRAMAddr(void *addr) {
  // bank = (res >> MemConfig.BK_SHIFT) & MemConfig.BK_MASK;
  // row = (res >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
  // col = (res >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
+}*/
+
+DRAMAddr::DRAMAddr(void *addr) {
+  // 1) Try kernel-based decode via tiny shim (env var gated inside the shim).
+  if (auto t = decode_pa_with_kernel(reinterpret_cast<uint64_t>(addr))) {
+    // If your shim returns (chan, rank, bg, bank, row, col), we only need bank/row/col here.
+    // If your header only has bank/row/col members, do NOT keep channel/rank/bg fields.
+    bank = (static_cast<size_t>(t->bg) << 2) | static_cast<size_t>(t->bank);
+    row  = static_cast<size_t>(t->row);
+    col  = static_cast<size_t>(t->col);
+    return;
+  }
+
+  // 2) Fallback: built-in mapping from *virtual address* using DRAM_MTX.
+  // Take only the low 30-bit "superpage" offset (to match how base_msb is used elsewhere).
+  size_t v = (reinterpret_cast<size_t>(addr)) & ((1ULL << 30ULL) - 1ULL);
+
+  // Reconstruct the linear (bank|row|col) bitstring by parity over DRAM_MTX rows.
+  size_t l = 0;
+  for (unsigned long m : MemConfig.DRAM_MTX) {
+    l <<= 1ULL;
+    l |= static_cast<size_t>(__builtin_parityl(v & m));
+  }
+
+  // Split that linear value into the fields expected by this class.
+  bank = (l >> MemConfig.BK_SHIFT)  & MemConfig.BK_MASK;
+  row  = (l >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
+  col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
 }
+
 
 size_t DRAMAddr::linearize() const {
   return (this->bank << MemConfig.BK_SHIFT) | (this->row << MemConfig.ROW_SHIFT) | (this->col << MemConfig.COL_SHIFT);
