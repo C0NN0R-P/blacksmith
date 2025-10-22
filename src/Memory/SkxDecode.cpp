@@ -1,4 +1,4 @@
-#include "SkxDecode.hpp"
+#include "Memory/SkxDecode.hpp"
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
