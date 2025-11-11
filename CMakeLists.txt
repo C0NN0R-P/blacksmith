@@ -68,6 +68,7 @@ add_library(
         src/Memory/DramAnalyzer.cpp
         src/Memory/Memory.cpp
         src/Memory/SkxDecode.cpp
+        src/Memory/KernelDecode.cpp
         src/Utilities/Enums.cpp
         src/Utilities/Logger.cpp
 )
@@ -159,3 +160,16 @@ target_link_libraries(
 
 unset(BLACKSMITH_ENABLE_JSON CACHE)
 unset(BLACKSMITH_ENABLE_JITTING CACHE)
+
+add_custom_target(kernel_module
+        COMMAND ${MAKE_EXE} -C ${CMAKE_SOURCE_DIR}/kernel
+        BYPRODUCTS ${CMAKE_SOURCE_DIR}/kernel/skx_dram_decode_addr.ko
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/kernel
+        COMMENT "Building kernel module (skx_dram_decode_addr.ko) in kernel/"
+)
+
+add_custom_target(load_kernel_module
+        COMMAND sudo insmod ${CMAKE_SOURCE_DIR}/kernel/skx_dram_decode_addr.ko || true
+        DEPENDS kernel_module
+        COMMENT "Loading skx_dram_decode_addr.ko"
+)

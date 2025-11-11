@@ -1,0 +1,1 @@
+cmd_/home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.ko /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.o /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.mod.o;  true
