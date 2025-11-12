@@ -1,1 +1,1 @@
-cmd_/home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.mod := { echo  /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.o;  echo; } > /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.mod
+savedcmd_/home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.mod := printf '%s\n'   skx_dram_decode_addr.o | awk '!x[$$0]++ { print("/home/cim/pgr/pmai286/blacksmith/kernel/"$$0) }' > /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.mod

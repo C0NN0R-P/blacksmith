@@ -1,1 +1,1 @@
-cmd_/home/cim/pgr/pmai286/blacksmith/kernel/Module.symvers := sed 's/\.ko$$/\.o/' /home/cim/pgr/pmai286/blacksmith/kernel/modules.order | scripts/mod/modpost -m -a  -o /home/cim/pgr/pmai286/blacksmith/kernel/Module.symvers -e -i Module.symvers   -T -
+savedcmd_/home/cim/pgr/pmai286/blacksmith/kernel/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/cim/pgr/pmai286/blacksmith/kernel/Module.symvers -T /home/cim/pgr/pmai286/blacksmith/kernel/modules.order -i Module.symvers -e 

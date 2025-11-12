@@ -2,8 +2,14 @@
 #define INCLUDE_VERMAGIC
 #include <linux/build-salt.h>
 #include <linux/elfnote-lto.h>
+#include <linux/export-internal.h>
 #include <linux/vermagic.h>
 #include <linux/compiler.h>
+
+#ifdef CONFIG_UNWINDER_ORC
+#include <asm/orc_header.h>
+ORC_HEADER;
+#endif
 
 BUILD_SALT;
 BUILD_LTO_INFO;
@@ -25,21 +31,23 @@ __section(".gnu.linkonce.this_module") = {
 MODULE_INFO(retpoline, "Y");
 #endif
 
+
+
 static const struct modversion_info ____versions[]
 __used __section("__versions") = {
-	{ 0xe6616ea7, "module_layout" },
-	{ 0xb3e9ab5a, "param_ops_ullong" },
-	{ 0x1eed7361, "misc_deregister" },
-	{ 0xf95488e3, "misc_register" },
-	{ 0x63026490, "unregister_kprobe" },
-	{ 0xfcca5424, "register_kprobe" },
-	{ 0x92997ed8, "_printk" },
-	{ 0xd0da656b, "__stack_chk_fail" },
+	{ 0xbb10e61d, "unregister_kprobe" },
+	{ 0x792e9fd, "misc_register" },
 	{ 0x5b8239ca, "__x86_return_thunk" },
-	{ 0x6b10bee1, "_copy_to_user" },
 	{ 0x65487097, "__x86_indirect_thunk_rax" },
+	{ 0xf0fdf6cb, "__stack_chk_fail" },
 	{ 0x13c49cc2, "_copy_from_user" },
+	{ 0x6b10bee1, "_copy_to_user" },
+	{ 0x8adf66df, "misc_deregister" },
+	{ 0xd1cf069, "param_ops_ullong" },
 	{ 0xbdfb6dbb, "__fentry__" },
+	{ 0x122c3a7e, "_printk" },
+	{ 0x3f66a26e, "register_kprobe" },
+	{ 0xe2fd41e5, "module_layout" },
 };
 
 MODULE_INFO(depends, "");

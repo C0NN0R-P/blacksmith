@@ -1,1 +1,1 @@
-cmd_/home/cim/pgr/pmai286/blacksmith/kernel/modules.order := {   echo /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.ko; :; } | awk '!x[$$0]++' - > /home/cim/pgr/pmai286/blacksmith/kernel/modules.order
+savedcmd_/home/cim/pgr/pmai286/blacksmith/kernel/modules.order := {   echo /home/cim/pgr/pmai286/blacksmith/kernel/skx_dram_decode_addr.o; :; } > /home/cim/pgr/pmai286/blacksmith/kernel/modules.order
