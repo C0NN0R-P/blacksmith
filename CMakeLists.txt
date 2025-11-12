@@ -143,6 +143,14 @@ add_executable(
         src/Blacksmith.cpp
 )
 
+add_library(SkxDecode STATIC
+	${CMAKE_SOURCE_DIR}/src/SkxDecode/SkxDecode.cpp
+)
+
+target_include_directories(SkxDecode PUBLIC
+	${CMAKE_SOURCE_DIR}/include
+)
+
 target_compile_definitions(
         blacksmith
         PRIVATE
