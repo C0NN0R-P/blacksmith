@@ -11,11 +11,11 @@ std::map<size_t, MemConfiguration> DRAMAddr::Configs;
 
 void DRAMAddr::initialize(uint64_t num_bank_rank_functions, volatile char *start_address) {
   // TODO: This is a shortcut to check if it's a single rank dimm or dual rank in order to load the right memory
-  //  configuration. We should get these infos from dmidecode to do it properly, but for now this is easier.
+  // configuration. We should get these infos from dmidecode to do it properly, but for now this is easier.
   size_t num_ranks;
-  if (num_bank_rank_functions==5) {
+  if (num_bank_rank_functions == 5) {
     num_ranks = RANKS(2);
-  } else if (num_bank_rank_functions==4) {
+  } else if (num_bank_rank_functions == 4) {
     num_ranks = RANKS(1);
   } else {
     Logger::log_error("Could not initialize DRAMAddr as #ranks seems not to be 1 or 2.");
@@ -26,11 +26,12 @@ void DRAMAddr::initialize(uint64_t num_bank_rank_functions, volatile char *start
 }
 
 void DRAMAddr::set_base_msb(void *buff) {
-  base_msb = (size_t) buff & (~((size_t) (1ULL << 30UL) - 1UL));  // get higher order bits above the super page
+  // get higher order bits above the super page
+  base_msb = (size_t) buff & (~((size_t) (1ULL << 30UL) - 1UL));
 }
 
 // TODO we can create a DRAMconfig class to load the right matrix depending on
-// the configuration. You could also test it by checking if you can trigger bank conflcits
+// the configuration. You could also test it by checking if you can trigger bank conflicts
 void DRAMAddr::load_mem_config(mem_config_t cfg) {
   DRAMAddr::initialize_configs();
   MemConfig = Configs[cfg];
@@ -40,136 +41,16 @@ DRAMAddr::DRAMAddr() = default;
 
 DRAMAddr::DRAMAddr(size_t bk, size_t r, size_t c) {
   bank = bk;
-  row = r;
-  col = c;
+  row  = r;
+  col  = c;
 }
-
-/*DRAMAddr::DRAMAddr(void *addr) {
-{
-    // Kernel module-based decoding logic
-    this->col = reinterpret_cast<size_t>(addr) & 0x3FF;
-    unsigned long long virt = reinterpret_cast<unsigned long long>(addr);
-    FILE *pagemap = fopen("/proc/self/pagemap", "rb");
-    if (!pagemap) { perror("fopen pagemap"); exit(1); }
-    unsigned long long offset = (virt / getpagesize()) * sizeof(uint64_t);
-    if (fseek(pagemap, offset, SEEK_SET) != 0) { perror("fseek"); exit(1); }
-    uint64_t phys_entry;
-    fread(&phys_entry, sizeof(uint64_t), 1, pagemap);
-    fclose(pagemap);
-    if (!(phys_entry & (1ULL << 63))) { fprintf(stderr, "Page not present\n"); exit(1); }
-    unsigned long long pfn = phys_entry & ((1ULL << 55) - 1);
-    unsigned long long phys_addr = (pfn * getpagesize()) + (virt & (getpagesize() - 1));
-
-    FILE *f = fopen("/sys/module/skx_decode/parameters/phys_addr", "w");
-    if (!f) { perror("fopen phys_addr"); exit(1); }
-    fprintf(f, "%llu", phys_addr);
-    fclose(f);
-
-    usleep(1000);
-    f = fopen("/proc/addr_decode", "r");
-    if (!f) { perror("fopen addr_decode"); exit(1); }
-    char buf[256];
-    fgets(buf, sizeof(buf), f);
-    fclose(f);
-
-    int ch = -1, rk = -1, bg = -1, bk = -1, row_val = -1, col_val = -1;
-    sscanf(buf, "addr=%*x socket=%*d imc=%*d channel=%d dimm=%*d rank=%d row=%d col=%d bank=%d bg=%d",
-       &ch, &rk, &row_val, &col_val, &bk, &bg);
-
-    this->channel = ch;
-    this->rank = rk;
-    this->bank_group = bg;
-    this->bank = (bg << 2) | bk;
-    this->row = row_val;
-    this->col = col_val;
-    return;
-}
- // bank = (res >> MemConfig.BK_SHIFT) & MemConfig.BK_MASK;
- // row = (res >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
- // col = (res >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
-}
-
-DRAMAddr::DRAMAddr(void *addr) {
-  // 1) Try kernel-based decode via tiny shim (env var gated inside the shim).
-  if (auto t = decode_pa_with_kernel(reinterpret_cast<uint64_t>(addr))) {
-    // If your shim returns (chan, rank, bg, bank, row, col), we only need bank/row/col here.
-    // If your header only has bank/row/col members, do NOT keep channel/rank/bg fields.
-    bank = (static_cast<size_t>(t->bg) << 2) | static_cast<size_t>(t->bank);
-    row  = static_cast<size_t>(t->row);
-    col  = static_cast<size_t>(t->col);
-    return;
-  }
-
-  // 2) Fallback: built-in mapping from *virtual address* using DRAM_MTX.
-  // Take only the low 30-bit "superpage" offset (to match how base_msb is used elsewhere).
-  size_t v = (reinterpret_cast<size_t>(addr)) & ((1ULL << 30ULL) - 1ULL);
-
-  // Reconstruct the linear (bank|row|col) bitstring by parity over DRAM_MTX rows.
-  size_t l = 0;
-  for (unsigned long m : MemConfig.DRAM_MTX) {
-    l <<= 1ULL;
-    l |= static_cast<size_t>(__builtin_parityl(v & m));
-  }
-
-  // Split that linear value into the fields expected by this class.
-  bank = (l >> MemConfig.BK_SHIFT)  & MemConfig.BK_MASK;
-  row  = (l >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
-  col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
-} 
-
-DRAMAddr::DRAMAddr(void *addr) {
-  // First try: real mapping via kernel module (virt -> phys -> decode)
-  const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
-  const long page_size = ::getpagesize();
-
-  bool decoded = false;
-
-  FILE *pm = std::fopen("/proc/self/pagemap", "rb");
-  if (pm != nullptr) {
-    // Each entry in pagemap is a 64-bit value
-    const std::uint64_t index =
-        (virt / static_cast<std::uint64_t>(page_size)) * sizeof(std::uint64_t);
-
-    if (std::fseek(pm, static_cast<long>(index), SEEK_SET) == 0) {
-      std::uint64_t phys_entry = 0;
-      if (std::fread(&phys_entry, sizeof(phys_entry), 1, pm) == 1) {
-        // bit 63 == 1 → page present
-        if (phys_entry & (1ULL << 63)) {
-          const std::uint64_t pfn = phys_entry & ((1ULL << 55) - 1);
-          const std::uint64_t phys_addr =
-              (pfn * static_cast<std::uint64_t>(page_size)) +
-              (virt & (static_cast<std::uint64_t>(page_size) - 1));
-
-          if (auto t = decode_pa_with_kernel(phys_addr)) {
-            // Fill in extended fields (your DRAMAddr has these members)
-            channel     = t->chan;
-            rank        = t->rank;
-            bank_group  = t->bg;
-
-            // Blacksmith uses a 4-bit bank index; we pack bg + bank here.
-            bank = (static_cast<size_t>(t->bg) << 2) |
-                   static_cast<size_t>(t->bank);
-
-            row = static_cast<size_t>(t->row);
-            col = static_cast<size_t>(t->col);
-
-            decoded = true;
-          }
-        }
-      }
-    }
-
-    std::fclose(pm);
-  }
-
-*/
 
 DRAMAddr::DRAMAddr(void *addr) {
   // ==== Try real mapping via kernel module (virt -> phys -> DRAM) ====
   const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
-  const long page_size = ::getpagesize();
+  const long page_size     = ::getpagesize();
 
-  bool decoded = false;
+  bool          decoded   = false;
   std::uint64_t phys_addr = 0;
 
   FILE *pm = std::fopen("/proc/self/pagemap", "rb");
@@ -189,9 +70,9 @@ DRAMAddr::DRAMAddr(void *addr) {
 
           if (auto t = decode_pa_with_kernel(phys_addr)) {
             // Fill in extended fields (your DRAMAddr has these members)
-            channel     = t->chan;
-            rank        = t->rank;
-            bank_group  = t->bg;
+            channel    = t->chan;
+            rank       = t->rank;
+            bank_group = t->bg;
 
             // Blacksmith uses a combined bank index; pack bg + bank here.
             bank = (static_cast<size_t>(t->bg) << 2) |
@@ -216,7 +97,7 @@ DRAMAddr::DRAMAddr(void *addr) {
       std::printf(
           "[DRAMAddr] VA=%p PA=0x%llx chan=%d rank=%d bg=%d bank=%zu row=%zu col=%zu\n",
           addr,
-          (unsigned long long)phys_addr,
+          (unsigned long long) phys_addr,
           channel,
           rank,
           bank_group,
@@ -247,33 +128,10 @@ DRAMAddr::DRAMAddr(void *addr) {
   col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
 }
 
-
-
-  if (decoded) {
-    // We successfully used the kernel module – nothing more to do.
-    return;
-  }
-
-  // Fallback: original Blacksmith analytical mapping from virtual address
-  // Take only the low 30-bit "superpage" offset
-  size_t v = (reinterpret_cast<size_t>(addr)) & ((1ULL << 30ULL) - 1ULL);
-
-  // Reconstruct the linear (bank|row|col) bitstring by parity over DRAM_MTX rows
-  size_t l = 0;
-  for (unsigned long m : MemConfig.DRAM_MTX) {
-    l <<= 1ULL;
-    l |= static_cast<size_t>(__builtin_parityl(v & m));
-  }
-
-  // Split that linear value into the fields expected by this class
-  bank = (l >> MemConfig.BK_SHIFT)  & MemConfig.BK_MASK;
-  row  = (l >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
-  col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
-}
-
-
 size_t DRAMAddr::linearize() const {
-  return (this->bank << MemConfig.BK_SHIFT) | (this->row << MemConfig.ROW_SHIFT) | (this->col << MemConfig.COL_SHIFT);
+  return (this->bank << MemConfig.BK_SHIFT) |
+         (this->row  << MemConfig.ROW_SHIFT) |
+         (this->col  << MemConfig.COL_SHIFT);
 }
 
 void *DRAMAddr::to_virt() {
@@ -282,7 +140,7 @@ void *DRAMAddr::to_virt() {
 
 void *DRAMAddr::to_virt() const {
   size_t res = 0;
-  size_t l = this->linearize();
+  size_t l   = this->linearize();
   for (unsigned long i : MemConfig.ADDR_MTX) {
     res <<= 1ULL;
     res |= (size_t) __builtin_parityl(l & i);
@@ -293,7 +151,7 @@ void *DRAMAddr::to_virt() const {
 
 std::string DRAMAddr::to_string() {
   char buff[1024];
-  sprintf(buff, "DRAMAddr(b: %zu, r: %zu, c: %zu) = %p",
+  std::sprintf(buff, "DRAMAddr(b: %zu, r: %zu, c: %zu) = %p",
       this->bank,
       this->row,
       this->col,
@@ -303,7 +161,7 @@ std::string DRAMAddr::to_string() {
 
 std::string DRAMAddr::to_string_compact() const {
   char buff[1024];
-  sprintf(buff, "(%ld,%ld,%ld)",
+  std::sprintf(buff, "(%ld,%ld,%ld)",
       this->bank,
       this->row,
       this->col);
@@ -316,8 +174,8 @@ DRAMAddr DRAMAddr::add(size_t bank_increment, size_t row_increment, size_t colum
 
 void DRAMAddr::add_inplace(size_t bank_increment, size_t row_increment, size_t column_increment) {
   bank += bank_increment;
-  row += row_increment;
-  col += column_increment;
+  row  += row_increment;
+  col  += column_increment;
 }
 
 // Define the static DRAM configs
@@ -349,14 +207,14 @@ nlohmann::json DRAMAddr::get_memcfg_json() {
 void DRAMAddr::initialize_configs() {
   struct MemConfiguration single_rank = {
       .IDENTIFIER = (CHANS(1UL) | DIMMS(1UL) | RANKS(1UL) | BANKS(16UL)),
-      .BK_SHIFT =  26,
-      .BK_MASK =  (0b1111),
-      .ROW_SHIFT =  0,
-      .ROW_MASK =  (0b1111111111111),
-      .COL_SHIFT =  13,
-      .COL_MASK =  (0b1111111111111),
+      .BK_SHIFT   = 26,
+      .BK_MASK    = (0b1111),
+      .ROW_SHIFT  = 0,
+      .ROW_MASK   = (0b1111111111111),
+      .COL_SHIFT  = 13,
+      .COL_MASK   = (0b1111111111111),
       /* maps a virtual addr -> DRAM addr: bank (4 bits) | col (13 bits) | row (13 bits) */
-      .DRAM_MTX =  {
+      .DRAM_MTX = {
           0b000000000000000010000001000000, /* 0x02040 bank b3 = addr b6 + b13 */
           0b000000000000100100000000000000, /* 0x24000 bank b2 = addr b14 + b17 */
           0b000000000001001000000000000000, /* 0x48000 bank b1 = addr b15 + b18 */
@@ -387,9 +245,9 @@ void DRAMAddr::initialize_configs() {
           0b000000000010000000000000000000, /* row b2 = addr b19 */
           0b000000000001000000000000000000, /* row b1 = addr b18 */
           0b000000000000100000000000000000, /* row b0 = addr b17 */
-          },
+      },
       /* maps a DRAM addr (bank | col | row) --> virtual addr */
-      .ADDR_MTX =  {
+      .ADDR_MTX = {
           0b000000000000000001000000000000, /* addr b29 = row b12 */
           0b000000000000000000100000000000, /* addr b28 = row b11 */
           0b000000000000000000010000000000, /* addr b27 = row b10 */
@@ -422,15 +280,16 @@ void DRAMAddr::initialize_configs() {
           0b000000000000000010000000000000  /* addr b0 = col b0 */
       }
   };
+
   struct MemConfiguration dual_rank = {
       .IDENTIFIER = (CHANS(1UL) | DIMMS(1UL) | RANKS(2UL) | BANKS(16UL)),
-      .BK_SHIFT =  25,
-      .BK_MASK =  (0b11111),
-      .ROW_SHIFT =  0,
-      .ROW_MASK =  (0b111111111111),
-      .COL_SHIFT =  12,
-      .COL_MASK =  (0b1111111111111),
-      .DRAM_MTX =  {
+      .BK_SHIFT   = 25,
+      .BK_MASK    = (0b11111),
+      .ROW_SHIFT  = 0,
+      .ROW_MASK   = (0b111111111111),
+      .COL_SHIFT  = 12,
+      .COL_MASK   = (0b1111111111111),
+      .DRAM_MTX = {
           0b000000000000000010000001000000,
           0b000000000001000100000000000000,
           0b000000000010001000000000000000,
@@ -462,7 +321,7 @@ void DRAMAddr::initialize_configs() {
           0b000000000010000000000000000000,
           0b000000000001000000000000000000
       },
-      .ADDR_MTX =  {
+      .ADDR_MTX = {
           0b000000000000000000100000000000,
           0b000000000000000000010000000000,
           0b000000000000000000001000000000,
@@ -495,6 +354,7 @@ void DRAMAddr::initialize_configs() {
           0b000000000000000001000000000000
       }
   };
+
   DRAMAddr::Configs = {
       {(CHANS(1UL) | DIMMS(1UL) | RANKS(1UL) | BANKS(16UL)), single_rank},
       {(CHANS(1UL) | DIMMS(1UL) | RANKS(2UL) | BANKS(16UL)), dual_rank}
@@ -505,9 +365,8 @@ void DRAMAddr::initialize_configs() {
 
 void to_json(nlohmann::json &j, const DRAMAddr &p) {
   j = {{"bank", p.bank},
-       {"row", p.row},
-       {"col", p.col}
-  };
+       {"row",  p.row},
+       {"col",  p.col}};
 }
 
 void from_json(const nlohmann::json &j, DRAMAddr &p) {
