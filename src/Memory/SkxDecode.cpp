@@ -1,32 +1,46 @@
 #include "Memory/SkxDecode.hpp"
+#include "Memory/skx_dram_decode_uapi.h"
+
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <cstdlib>
-
-struct skx_decode_io {
-    uint64_t phys;
-    int chan, rank, bg, bank, row, col;
-};
-
-#ifndef SKX_DECODE_IOCTL
-#define SKX_DECODE_IOCTL _IOWR('k', 0xD0, struct skx_decode_io)
-#endif
+#include <optional>
+#include <cstdint>
 
 static bool kernel_mode_enabled() {
-    const char* v = std::getenv("BLACKSMITH_USE_KERNEL");
-    return v && *v && *v != '0';
+  const char *v = std::getenv("BLACKSMITH_USE_KERNEL");
+  return v && *v && *v != '0';
 }
 
-std::optional<DramTuple> decode_pa_with_kernel(uint64_t phys) {
-    if (!kernel_mode_enabled()) return std::nullopt;
-    int fd = open("/dev/skx_dram_decode_addr", O_RDONLY);
-    if (fd < 0) return std::nullopt;
-    skx_decode_io io{.phys = phys};
-    if (ioctl(fd, SKX_DECODE_IOCTL, &io) != 0) {
-        close(fd);
-        return std::nullopt;
-    }
-    close(fd);
-    return DramTuple{io.chan, io.rank, io.bg, io.bank, io.row, io.col};
+std::optional<DramTuple> decode_pa_with_kernel(uint64_t phys_addr) {
+  if (!kernel_mode_enabled()) {
+    return std::nullopt;
+  }
+
+  // Open the misc device created by your kernel module
+  int fd = ::open(SKX_DECODER_DEV, O_RDONLY);
+  if (fd < 0) {
+    return std::nullopt;
+  }
+
+  skx_decode_req req{};
+  req.phys_addr = phys_addr;
+
+  if (::ioctl(fd, SKX_IOCTL_DECODE, &req) != 0) {
+    ::close(fd);
+    return std::nullopt;
+  }
+
+  ::close(fd);
+
+  DramTuple t;
+  t.chan = req.channel;
+  t.rank = req.rank;
+  t.bg   = req.bank_group;
+  t.bank = req.bank;
+  t.row  = static_cast<int>(req.row);
+  t.col  = static_cast<int>(req.col);
+
+  return t;
 }

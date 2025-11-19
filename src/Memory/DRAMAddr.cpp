@@ -2,6 +2,10 @@
 #include "GlobalDefines.hpp"
 #include "Memory/SkxDecode.hpp"
 
+#include <cstdio>
+#include <cstdint>
+#include <unistd.h>
+
 // initialize static variable
 std::map<size_t, MemConfiguration> DRAMAddr::Configs;
 
@@ -83,7 +87,7 @@ DRAMAddr::DRAMAddr(size_t bk, size_t r, size_t c) {
  // bank = (res >> MemConfig.BK_SHIFT) & MemConfig.BK_MASK;
  // row = (res >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
  // col = (res >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
-}*/
+}
 
 DRAMAddr::DRAMAddr(void *addr) {
   // 1) Try kernel-based decode via tiny shim (env var gated inside the shim).
@@ -108,6 +112,160 @@ DRAMAddr::DRAMAddr(void *addr) {
   }
 
   // Split that linear value into the fields expected by this class.
+  bank = (l >> MemConfig.BK_SHIFT)  & MemConfig.BK_MASK;
+  row  = (l >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
+  col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
+} 
+
+DRAMAddr::DRAMAddr(void *addr) {
+  // First try: real mapping via kernel module (virt -> phys -> decode)
+  const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
+  const long page_size = ::getpagesize();
+
+  bool decoded = false;
+
+  FILE *pm = std::fopen("/proc/self/pagemap", "rb");
+  if (pm != nullptr) {
+    // Each entry in pagemap is a 64-bit value
+    const std::uint64_t index =
+        (virt / static_cast<std::uint64_t>(page_size)) * sizeof(std::uint64_t);
+
+    if (std::fseek(pm, static_cast<long>(index), SEEK_SET) == 0) {
+      std::uint64_t phys_entry = 0;
+      if (std::fread(&phys_entry, sizeof(phys_entry), 1, pm) == 1) {
+        // bit 63 == 1 → page present
+        if (phys_entry & (1ULL << 63)) {
+          const std::uint64_t pfn = phys_entry & ((1ULL << 55) - 1);
+          const std::uint64_t phys_addr =
+              (pfn * static_cast<std::uint64_t>(page_size)) +
+              (virt & (static_cast<std::uint64_t>(page_size) - 1));
+
+          if (auto t = decode_pa_with_kernel(phys_addr)) {
+            // Fill in extended fields (your DRAMAddr has these members)
+            channel     = t->chan;
+            rank        = t->rank;
+            bank_group  = t->bg;
+
+            // Blacksmith uses a 4-bit bank index; we pack bg + bank here.
+            bank = (static_cast<size_t>(t->bg) << 2) |
+                   static_cast<size_t>(t->bank);
+
+            row = static_cast<size_t>(t->row);
+            col = static_cast<size_t>(t->col);
+
+            decoded = true;
+          }
+        }
+      }
+    }
+
+    std::fclose(pm);
+  }
+
+*/
+
+DRAMAddr::DRAMAddr(void *addr) {
+  // ==== Try real mapping via kernel module (virt -> phys -> DRAM) ====
+  const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
+  const long page_size = ::getpagesize();
+
+  bool decoded = false;
+  std::uint64_t phys_addr = 0;
+
+  FILE *pm = std::fopen("/proc/self/pagemap", "rb");
+  if (pm != nullptr) {
+    const std::uint64_t index =
+        (virt / static_cast<std::uint64_t>(page_size)) * sizeof(std::uint64_t);
+
+    if (std::fseek(pm, static_cast<long>(index), SEEK_SET) == 0) {
+      std::uint64_t phys_entry = 0;
+      if (std::fread(&phys_entry, sizeof(phys_entry), 1, pm) == 1) {
+        // bit 63 == 1 → page present
+        if (phys_entry & (1ULL << 63)) {
+          const std::uint64_t pfn = phys_entry & ((1ULL << 55) - 1);
+          phys_addr =
+              (pfn * static_cast<std::uint64_t>(page_size)) +
+              (virt & (static_cast<std::uint64_t>(page_size) - 1));
+
+          if (auto t = decode_pa_with_kernel(phys_addr)) {
+            // Fill in extended fields (your DRAMAddr has these members)
+            channel     = t->chan;
+            rank        = t->rank;
+            bank_group  = t->bg;
+
+            // Blacksmith uses a combined bank index; pack bg + bank here.
+            bank = (static_cast<size_t>(t->bg) << 2) |
+                   static_cast<size_t>(t->bank);
+
+            row = static_cast<size_t>(t->row);
+            col = static_cast<size_t>(t->col);
+
+            decoded = true;
+          }
+        }
+      }
+    }
+
+    std::fclose(pm);
+  }
+
+  // Print a limited number of mappings so we can see what Blacksmith is doing.
+  if (decoded) {
+    static int printed = 0;
+    if (printed < 200) {
+      std::printf(
+          "[DRAMAddr] VA=%p PA=0x%llx chan=%d rank=%d bg=%d bank=%zu row=%zu col=%zu\n",
+          addr,
+          (unsigned long long)phys_addr,
+          channel,
+          rank,
+          bank_group,
+          bank,
+          row,
+          col);
+      printed++;
+    }
+
+    // We successfully used the kernel mapping – stop here.
+    return;
+  }
+
+  // ==== Fallback: original Blacksmith analytical mapping from virtual addr ====
+  // Take only the low 30-bit "superpage" offset
+  size_t v = (reinterpret_cast<size_t>(addr)) & ((1ULL << 30ULL) - 1ULL);
+
+  // Reconstruct the linear (bank|row|col) bitstring by parity over DRAM_MTX rows
+  size_t l = 0;
+  for (unsigned long m : MemConfig.DRAM_MTX) {
+    l <<= 1ULL;
+    l |= static_cast<size_t>(__builtin_parityl(v & m));
+  }
+
+  // Split that linear value into the fields expected by this class
+  bank = (l >> MemConfig.BK_SHIFT)  & MemConfig.BK_MASK;
+  row  = (l >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
+  col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
+}
+
+
+
+  if (decoded) {
+    // We successfully used the kernel module – nothing more to do.
+    return;
+  }
+
+  // Fallback: original Blacksmith analytical mapping from virtual address
+  // Take only the low 30-bit "superpage" offset
+  size_t v = (reinterpret_cast<size_t>(addr)) & ((1ULL << 30ULL) - 1ULL);
+
+  // Reconstruct the linear (bank|row|col) bitstring by parity over DRAM_MTX rows
+  size_t l = 0;
+  for (unsigned long m : MemConfig.DRAM_MTX) {
+    l <<= 1ULL;
+    l |= static_cast<size_t>(__builtin_parityl(v & m));
+  }
+
+  // Split that linear value into the fields expected by this class
   bank = (l >> MemConfig.BK_SHIFT)  & MemConfig.BK_MASK;
   row  = (l >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
   col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
