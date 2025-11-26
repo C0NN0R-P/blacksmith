@@ -12,7 +12,7 @@ size_t FuzzyHammerer::cnt_generated_patterns = 0UL;
 std::unordered_map<std::string, std::unordered_map<std::string, int>> FuzzyHammerer::map_pattern_mappings_bitflips;
 HammeringPattern FuzzyHammerer::hammering_pattern = HammeringPattern(); /* NOLINT */
 
-void FuzzyHammerer::n_sided_frequency_based_hammering(DramAnalyzer &dramAnalyzer, Memory &memory, int acts,
+void FuzzyHammerer::n_sided_frequency_based_hammering(Memory &memory, int acts,
                                                       unsigned long runtime_limit, const size_t probes_per_pattern,
                                                       bool sweep_best_pattern) {
   std::mt19937 gen = std::mt19937(std::random_device()());
@@ -103,21 +103,6 @@ void FuzzyHammerer::n_sided_frequency_based_hammering(DramAnalyzer &dramAnalyzer
         }
       }
     }
-
-    // dynamically change num acts per tREF after every 100 patterns; this is to avoid that we made a bad choice at the
-    // beginning and then get stuck with that value
-    // if the user provided a fixed num acts per tREF value via the program arguments, then we will not change it
-    if (cnt_generated_patterns%100==0 && !program_args.fixed_acts_per_ref) {
-      auto old_nacts = fuzzing_params.get_num_activations_per_t_refi();
-      // repeat measuring the number of possible activations per tREF as it might be that the current value is not optimal
-      fuzzing_params.set_num_activations_per_t_refi(static_cast<int>(dramAnalyzer.count_acts_per_trefi()));
-      Logger::log_info(
-          format_string("Recomputed number of ACTs per tREF (old: %d, new: %d).",
-              old_nacts,
-              fuzzing_params.get_num_activations_per_t_refi()));
-    }
-
-  } // end of fuzzing
 
   log_overall_statistics(
       cnt_generated_patterns,
@@ -237,6 +222,7 @@ void FuzzyHammerer::n_sided_frequency_based_hammering(DramAnalyzer &dramAnalyzer
     if (num_bitflips_sweep > 0)
       break;
   }
+}
 }
 
 void FuzzyHammerer::test_location_dependence(ReplayingHammerer &rh, HammeringPattern &pattern) {

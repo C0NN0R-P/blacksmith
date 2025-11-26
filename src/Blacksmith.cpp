@@ -76,21 +76,23 @@ int main(int argc, char **argv) {
   Memory memory(true);
   memory.allocate_memory(MEM_SIZE);
 
-  // find address sets that create bank conflicts
-  DramAnalyzer dram_analyzer(memory.get_starting_address());
-  dram_analyzer.find_bank_conflicts();
-  if (program_args.num_ranks != 0) {
-    dram_analyzer.load_known_functions(program_args.num_ranks);
+  if (program_args.num_ranks == 1) {
+    DRAMAddr::initialize(4, memory.get_starting_address());
+  } else if (program_args.num_ranks == 2) {
+    DRAMAddr::initialize(5, memory.get_starting_address());
   } else {
-    Logger::log_error("Program argument '--ranks <integer>' was probably not passed. Cannot continue.");
+    Logger::log_error("Unsupported or missing '--ranks <1|2>' value when DramAnalyzer is disabled.");
     exit(EXIT_FAILURE);
   }
-  // initialize the DRAMAddr class to load the proper memory configuration
-  DRAMAddr::initialize(dram_analyzer.get_bank_rank_functions().size(), memory.get_starting_address());
 
-  // count the number of possible activations per refresh interval, if not given as program argument
-  if (program_args.acts_per_trefi==0)
-    program_args.acts_per_trefi = dram_analyzer.count_acts_per_trefi();
+  /*if (program_args.acts_per_trefi == 0) {
+    Logger::log_error("acts_per_trefi was not specified; supply '--acts <N>' when running without DramAnalyzer");
+    exit(EXIT_FAILURE);
+  }*/
+
+  if (program_args.acts_per_trefi == 0) {
+    program_args.acts_per_trefi = 30000;
+  }
 
   if (!program_args.load_json_filename.empty()) {
     ReplayingHammerer replayer(memory);
@@ -101,7 +103,7 @@ int main(int argc, char **argv) {
       replayer.replay_patterns(program_args.load_json_filename, program_args.pattern_ids);
     }
   } else if (program_args.do_fuzzing && program_args.use_synchronization) {
-    FuzzyHammerer::n_sided_frequency_based_hammering(dram_analyzer, memory, static_cast<int>(program_args.acts_per_trefi), program_args.runtime_limit,
+    FuzzyHammerer::n_sided_frequency_based_hammering(memory, static_cast<int>(program_args.acts_per_trefi), program_args.runtime_limit,
         program_args.num_address_mappings_per_pattern, program_args.sweeping);
   } else if (!program_args.do_fuzzing) {
 //    TraditionalHammerer::n_sided_hammer(memory, program_args.acts_per_trefi, program_args.runtime_limit);

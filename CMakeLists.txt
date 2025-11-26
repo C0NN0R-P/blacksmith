@@ -65,7 +65,7 @@ add_library(
         src/Fuzzer/PatternAddressMapper.cpp
         src/Fuzzer/PatternBuilder.cpp
         src/Memory/DRAMAddr.cpp
-        src/Memory/DramAnalyzer.cpp
+        #src/Memory/DramAnalyzer.cpp
         src/Memory/Memory.cpp
         src/Memory/SkxDecode.cpp
         src/Memory/KernelDecode.cpp

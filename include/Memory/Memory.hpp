@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <string>
 
-#include "Memory/DramAnalyzer.hpp"
+#include "Utilities/AsmPrimitives.hpp"
 #include "Fuzzer/PatternAddressMapper.hpp"
 
 enum class DATA_PATTERN : char {

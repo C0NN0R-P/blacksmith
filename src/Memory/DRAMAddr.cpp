@@ -2,6 +2,7 @@
 #include "GlobalDefines.hpp"
 #include "Memory/SkxDecode.hpp"
 
+#include <iostream>
 #include <cstdio>
 #include <cstdint>
 #include <unistd.h>
@@ -68,6 +69,7 @@ DRAMAddr::DRAMAddr(void *addr) {
               (pfn * static_cast<std::uint64_t>(page_size)) +
               (virt & (static_cast<std::uint64_t>(page_size) - 1));
 
+          std::cout << phys_addr << ":phys\n";
           if (auto t = decode_pa_with_kernel(phys_addr)) {
             // Fill in extended fields (your DRAMAddr has these members)
             channel    = t->chan;

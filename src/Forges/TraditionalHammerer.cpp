@@ -2,6 +2,7 @@
 
 #include "Utilities/TimeHelper.hpp"
 #include "Blacksmith.hpp"
+#include <cinttypes>
 
 /// Performs hammering on given aggressor rows for HAMMER_ROUNDS times.
 void TraditionalHammerer::hammer(std::vector<volatile char *> &aggressors) {
