@@ -9,6 +9,7 @@
 #include <string>
 #include <fstream>
 #include <memory>
+#include <stdexcept>
 
 template<typename ... Args>
 std::string format_string(const std::string &format, Args ... args) {
@@ -32,6 +33,12 @@ class Logger {
   static std::string format_timestamp(unsigned long ts);
 
   unsigned long timestamp_start{};
+
+  // Runtime debug toggle; allows enabling verbose debug logs without recompiling.
+  // Enabled if either:
+  //  - compiled with -DDEBUG, or
+  //  - environment variable BLACKSMITH_DEBUG is set to a truthy value (1/true/yes/on).
+  static bool debug_enabled_runtime();
 
  public:
 

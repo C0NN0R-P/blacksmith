@@ -1,10 +1,19 @@
+/*
+ * ANNOTATION (dev notes)
+ * Centralised logging helper. The goal is to keep log formatting consistent and cheap.
+ * Anything that might be called from hot paths should avoid allocations where practical.
+ */
 #include "Utilities/Logger.hpp"
 
 #include <iostream>
+#include <cstdlib>
+#include <cctype>
 #include <GlobalDefines.hpp>
 
 // initialize the singleton instance
 Logger Logger::instance; /* NOLINT */
+
+// Keep initialisation minimal: we don’t want logging to be the thing that changes timings.
 
 Logger::Logger() = default;
 
@@ -58,15 +67,31 @@ void Logger::log_analysis_stage(const std::string &message, bool newline) {
 }
 
 void Logger::log_debug(const std::string &message, bool newline) {
-#ifdef DEBUG
+  if (!debug_enabled_runtime()) {
+    // ignore complaints of the compiler about unused params
+    std::ignore = message;
+    std::ignore = newline;
+    return;
+  }
+
   instance.logfile << FC_YELLOW "[DEBUG] " << message;
   instance.logfile << F_RESET;
   if (newline) instance.logfile << std::endl;
-#else
-  // this is just to ignore complaints of the compiler about unused params
-  std::ignore = message;
-  std::ignore = newline;
+}
+
+bool Logger::debug_enabled_runtime() {
+  // Compile-time: keep existing behaviour where DEBUG builds have debug enabled.
+#ifdef DEBUG
+  return true;
 #endif
+
+  // Runtime opt-in: BLACKSMITH_DEBUG=1/true/yes/on enables debug logs.
+  const char *v = std::getenv("BLACKSMITH_DEBUG");
+  if (v == nullptr) return false;
+
+  std::string s(v);
+  for (char &c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  return (s == "1" || s == "true" || s == "yes" || s == "on");
 }
 
 std::string Logger::format_timestamp(unsigned long ts) {

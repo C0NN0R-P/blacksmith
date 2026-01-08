@@ -3,6 +3,11 @@
  * Licensed under the MIT License, see LICENSE file for more details.
  */
 
+/*
+ * ANNOTATION (dev notes)
+ * Header for DRAMAddr (see DRAMAddr.cpp for the “how”).
+ * This class is used in a lot of places, so we keep the interface fairly small and stable.
+ */
 #ifndef DRAMADDR
 #define DRAMADDR
 
@@ -34,6 +39,10 @@ struct MemConfiguration {
   size_t DRAM_MTX[MTX_SIZE];
   size_t ADDR_MTX[MTX_SIZE];
 };
+
+// DRAMAddr stores both “raw” and “interpreted” address info.
+// Raw: virtual pointer + (maybe) physical address.
+// Interpreted: decoded DRAM tuple (channel/rank/bank/row/col) when available.
 
 class DRAMAddr {
  private:

@@ -1,6 +1,16 @@
+/*
+ * ANNOTATION (dev notes)
+ * Memory is responsible for grabbing a suitably large contiguous-ish region, touching it so
+ * pages are backed, and exposing helper methods used by the hammerers/fuzzer.
+ *
+ * It’s intentionally conservative: we try hard to avoid “clever” allocation tricks that
+ * change the experiment (e.g., THP surprises, lazy faults mid-run, etc.).
+ */
 #include "Memory/Memory.hpp"
 #include "Memory/DRAMAddr.hpp"
 #include "GlobalDefines.hpp"
+
+#include "Utilities/Debug.hpp"
 
 #include <cassert>
 #include <cstdlib>
@@ -15,6 +25,8 @@
 /// Allocates mem_size bytes of memory (we use regular heap memory, with an
 /// optional transparent-hugepage hint instead of hugetlbfs/mmap).
 void Memory::allocate_memory(size_t mem_size) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("mem_size=%zu superpage=%s", mem_size, superpage ? "true" : "false");
   // Remember how much memory we manage.
   this->size = mem_size;
 
@@ -25,6 +37,7 @@ void Memory::allocate_memory(size_t mem_size) {
 
   void *buf = nullptr;
   int rc = posix_memalign(&buf, align_used, this->size);
+  BS_DLOGF("posix_memalign(align=%zu,size=%zu) rc=%d buf=%p", align_used, this->size, rc, buf);
   if (rc != 0 || buf == nullptr) {
     Logger::log_error("posix_memalign failed in Memory::allocate_memory");
     Logger::log_data(std::strerror(rc != 0 ? rc : errno));
@@ -35,7 +48,9 @@ void Memory::allocate_memory(size_t mem_size) {
 
   // If superpage mode is requested, just give THP a hint.
   if (superpage) {
-    if (madvise(buf, this->size, MADV_HUGEPAGE) != 0) {
+    int mr = madvise(buf, this->size, MADV_HUGEPAGE);
+    BS_DLOGF("madvise(MADV_HUGEPAGE) ret=%d errno=%d", mr, errno);
+    if (mr != 0) {
       Logger::log_info("madvise(MADV_HUGEPAGE) failed – continuing without hugepage hint.");
     }
   }
@@ -45,14 +60,21 @@ void Memory::allocate_memory(size_t mem_size) {
 }
 
 void Memory::initialize(DATA_PATTERN data_pattern) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("data_pattern=%d size=%zu page_size=%d", (int)data_pattern, size, getpagesize());
   Logger::log_info("Initializing memory with pseudorandom sequence.");
 
   // for each page in the address space [0, size)
-  for (uint64_t cur_page = 0; cur_page < size; cur_page += getpagesize()) {
+  const uint64_t pagesize = static_cast<uint64_t>(getpagesize());
+  for (uint64_t cur_page = 0; cur_page < size; cur_page += pagesize) {
+    // log occasionally to avoid giant logs for large allocations
+    if ((cur_page / pagesize) % 4096 == 0) {
+      BS_DLOGF("initialize progress: page=%lu/%lu offset=%lu", (unsigned long)(cur_page/pagesize), (unsigned long)(size/pagesize), (unsigned long)cur_page);
+    }
     // reseed rand to have a sequence of reproducible numbers
-    srand(static_cast<unsigned int>(cur_page * getpagesize()));
+    srand(static_cast<unsigned int>(cur_page * pagesize));
     for (uint64_t cur_pageoffset = 0;
-         cur_pageoffset < static_cast<uint64_t>(getpagesize());
+         cur_pageoffset < pagesize;
          cur_pageoffset += sizeof(int)) {
 
       int fill_value = 0;
@@ -76,6 +98,8 @@ void Memory::initialize(DATA_PATTERN data_pattern) {
 size_t Memory::check_memory(PatternAddressMapper &mapping,
                             bool reproducibility_mode,
                             bool verbose) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("reproducibility_mode=%s verbose=%s", reproducibility_mode ? "true" : "false", verbose ? "true" : "false");
   flipped_bits.clear();
 
   auto victim_rows = mapping.get_victim_rows();
@@ -85,6 +109,7 @@ size_t Memory::check_memory(PatternAddressMapper &mapping,
 
   size_t sum_found_bitflips = 0;
   for (const auto &victim_row : victim_rows) {
+    BS_DLOGF("victim_row=%p", victim_row);
     auto victim_dram_addr = DRAMAddr((char *) victim_row);
     victim_dram_addr.add_inplace(0, 1, 0);
     sum_found_bitflips += check_memory_internal(mapping,
@@ -98,6 +123,8 @@ size_t Memory::check_memory(PatternAddressMapper &mapping,
 
 size_t Memory::check_memory(const volatile char *start,
                             const volatile char *end) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("start=%p end=%p", start, end);
   flipped_bits.clear();
   // create a "fake" pattern mapping to keep this method for backward compatibility
   PatternAddressMapper pattern_mapping;
@@ -109,6 +136,11 @@ size_t Memory::check_memory_internal(PatternAddressMapper &mapping,
                                      const volatile char *end,
                                      bool reproducibility_mode,
                                      bool verbose) {
+  BS_TRACE_SCOPE_NAMED("Memory::check_memory_internal");
+  BS_DLOGF("start=%p end=%p start_address=%p size=%zu reproducibility_mode=%s verbose=%s",
+           start, end, start_address, size,
+           reproducibility_mode ? "true" : "false",
+           verbose ? "true" : "false");
   // counter for the number of found bit flips in the memory region [start, end]
   size_t found_bitflips = 0;
 
@@ -123,11 +155,15 @@ size_t Memory::check_memory_internal(PatternAddressMapper &mapping,
 
   auto start_offset = (uint64_t) (start - start_address);
 
+  BS_DLOGF("raw start_offset=%lu", (unsigned long)start_offset);
+
   const auto pagesize = static_cast<size_t>(getpagesize());
   start_offset = (start_offset / pagesize) * pagesize;
 
   auto end_offset = start_offset + (uint64_t) (end - start);
   end_offset = (end_offset / pagesize) * pagesize;
+
+  BS_DLOGF("aligned start_offset=%lu end_offset=%lu pagesize=%zu", (unsigned long)start_offset, (unsigned long)end_offset, pagesize);
 
   void *page_raw = std::malloc(pagesize);
   if (page_raw == nullptr) {
@@ -139,6 +175,9 @@ size_t Memory::check_memory_internal(PatternAddressMapper &mapping,
 
   // for each page (4K) in the address space [start, end]
   for (uint64_t i = start_offset; i < end_offset; i += pagesize) {
+    if (((i - start_offset) / pagesize) % 4096 == 0) {
+      BS_DLOGF("scan progress: page_index=%lu i=%lu", (unsigned long)((i - start_offset)/pagesize), (unsigned long)i);
+    }
     // reseed rand to have the desired sequence of reproducible numbers
     srand(static_cast<unsigned int>(i * pagesize));
 
@@ -152,6 +191,8 @@ size_t Memory::check_memory_internal(PatternAddressMapper &mapping,
     if ((addr + pagesize) < ((uint64_t) start_address + size) &&
         std::memcmp((void *) addr, (void *) page, pagesize) == 0)
       continue;
+
+    BS_DLOGF("memcmp mismatch or boundary; addr=%p", (void*)addr);
 
     // iterate over blocks of 4 bytes (=sizeof(int))
     for (uint64_t j = 0; j < (uint64_t) pagesize; j += sizeof(int)) {
@@ -186,6 +227,10 @@ size_t Memory::check_memory_internal(PatternAddressMapper &mapping,
                                 expected_value, flipped_addr_value,
                                 (size_t) time(nullptr), true);
           }
+          BS_DLOGF("bitflip stored: flipped_address=%p row=%lu expected=0x%x actual=0x%x xor=0x%x",
+                   (void*)flipped_address, (unsigned long)flipped_addr_dram.row,
+                   (unsigned)expected_value, (unsigned)flipped_addr_value,
+                   (unsigned)(expected_value ^ flipped_addr_value));
           // store detailed information about the bit flip
           BitFlip bitflip(flipped_addr_dram,
                           (expected_value ^ flipped_addr_value),
@@ -220,6 +265,9 @@ size_t Memory::check_memory_internal(PatternAddressMapper &mapping,
   std::free(page_raw);
   return found_bitflips;
 }
+
+// The constructor does the heavy lifting: reserve memory, fault it in, and optionally
+// build any address maps the fuzzer/hammerers rely on.
 
 Memory::Memory(bool use_superpage)
     : start_address(nullptr),

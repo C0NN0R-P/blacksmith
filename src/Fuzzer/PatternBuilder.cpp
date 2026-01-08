@@ -1,15 +1,29 @@
+/*
+ * ANNOTATION (dev notes)
+ * PatternBuilder is where “a pile of candidate addresses” turns into a concrete hammering plan.
+ * Most of the complexity here is about:
+ *   - keeping patterns internally consistent (same rows/banks where required),
+ *   - meeting constraints (distance, bank conflicts, etc.),
+ *   - and doing it fast enough to iterate in the fuzzer.
+ */
 #include <unordered_set>
 
 #include "Fuzzer/FuzzingParameterSet.hpp"
 #include "Fuzzer/PatternBuilder.hpp"
 
+#include "Utilities/Debug.hpp"
+
 PatternBuilder::PatternBuilder(HammeringPattern &hammering_pattern)
     : pattern(hammering_pattern), aggressor_id_counter(1) {
+  BS_TRACE_SCOPE_NAMED("PatternBuilder::PatternBuilder");
   std::random_device rd;
   gen = std::mt19937(rd());
+  BS_DLOG("seeded std::mt19937 from std::random_device");
 }
 
 size_t PatternBuilder::get_random_gaussian(std::vector<int> &list) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("list_size=%zu", list.size());
   // this 'repeat until we produce a valid value' approach is not very effective
   size_t result;
   do {
@@ -118,6 +132,8 @@ int PatternBuilder::get_next_prefilled_slot(size_t cur_idx, std::vector<int> sta
 void PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet &params,
                                                       int pattern_length,
                                                       int base_period) {
+  BS_TRACE_SCOPE_NAMED("PatternBuilder::generate_frequency_based_pattern");
+  BS_DLOGF("pattern_length=%d base_period=%d aggressors_empty=%s", pattern_length, base_period, pattern.aggressors.empty()?"true":"false");
   std::vector<int> start_indices_prefilled_slots;
   auto cur_prefilled_slots_idx = 0;
   // this is a helper function that takes the current index (of base_period) and then returns the index of either the
@@ -211,11 +227,15 @@ void PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet &param
 }
 
 void PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet &params) {
+  BS_TRACE_SCOPE_NAMED("PatternBuilder::generate_frequency_based_pattern(wrapper)");
+  BS_DLOGF("total_acts_pattern=%d base_period=%d num_refresh_intervals=%d", params.get_total_acts_pattern(), params.get_base_period(), params.get_num_refresh_intervals());
   generate_frequency_based_pattern(params, params.get_total_acts_pattern(), params.get_base_period());
 }
 
 void PatternBuilder::prefill_pattern(int pattern_total_acts,
                                      std::vector<AggressorAccessPattern> &fixed_aggs) {
+  BS_TRACE_SCOPE_NAMED("PatternBuilder::prefill_pattern");
+  BS_DLOGF("pattern_total_acts=%d fixed_aggs=%zu", pattern_total_acts, fixed_aggs.size());
   aggressor_id_counter = 1;
   pattern.aggressors = std::vector<Aggressor>(static_cast<size_t>(pattern_total_acts), Aggressor());
   for (auto &aap : fixed_aggs) {

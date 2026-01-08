@@ -1,6 +1,17 @@
+/*
+ * ANNOTATION (dev notes)
+ * DRAMAddr is the “address identity card” used all over Blacksmith:
+ * we start with a virtual pointer and try to recover something meaningful about where it
+ * lands in the memory hierarchy (physical address + channel/rank/bank/row/col when possible).
+ *
+ * Key rule: this is *best-effort* metadata. If a platform doesn’t support a decode path,
+ * callers still need to handle “unknown” fields gracefully.
+ */
 #include "Memory/DRAMAddr.hpp"
 #include "GlobalDefines.hpp"
 #include "Memory/SkxDecode.hpp"
+
+#include "Utilities/Debug.hpp"
 
 #include <iostream>
 #include <cstdio>
@@ -10,7 +21,12 @@
 // initialize static variable
 std::map<size_t, MemConfiguration> DRAMAddr::Configs;
 
+// Initialise shared decode/config state used by all DRAMAddr instances.
+// We keep this separate so callers can set up once after allocating the backing region.
+
 void DRAMAddr::initialize(uint64_t num_bank_rank_functions, volatile char *start_address) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("num_bank_rank_functions=%lu start_address=%p", (unsigned long)num_bank_rank_functions, (void*)start_address);
   // TODO: This is a shortcut to check if it's a single rank dimm or dual rank in order to load the right memory
   // configuration. We should get these infos from dmidecode to do it properly, but for now this is easier.
   size_t num_ranks;
@@ -27,6 +43,8 @@ void DRAMAddr::initialize(uint64_t num_bank_rank_functions, volatile char *start
 }
 
 void DRAMAddr::set_base_msb(void *buff) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("buff=%p", buff);
   // get higher order bits above the super page
   base_msb = (size_t) buff & (~((size_t) (1ULL << 30UL) - 1UL));
 }
@@ -34,8 +52,12 @@ void DRAMAddr::set_base_msb(void *buff) {
 // TODO we can create a DRAMconfig class to load the right matrix depending on
 // the configuration. You could also test it by checking if you can trigger bank conflicts
 void DRAMAddr::load_mem_config(mem_config_t cfg) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("cfg=0x%zx", (size_t)cfg);
   DRAMAddr::initialize_configs();
   MemConfig = Configs[cfg];
+  BS_DLOGF("MemConfig.IDENTIFIER=0x%zx BK_SHIFT=%zu ROW_SHIFT=%zu COL_SHIFT=%zu",
+           (size_t)MemConfig.IDENTIFIER, (size_t)MemConfig.BK_SHIFT, (size_t)MemConfig.ROW_SHIFT, (size_t)MemConfig.COL_SHIFT);
 }
 
 DRAMAddr::DRAMAddr() = default;
@@ -46,10 +68,17 @@ DRAMAddr::DRAMAddr(size_t bk, size_t r, size_t c) {
   col  = c;
 }
 
+// Construct from a live virtual pointer.
+// The “happy path” is: VA -> PA (via /proc/self/pagemap) -> DRAM tuple (via kernel decode ioctl).
+// If any step fails, we still store the VA and leave DRAM fields as “unknown/invalid”.
+
 DRAMAddr::DRAMAddr(void *addr) {
+  BS_TRACE_SCOPE_NAMED("DRAMAddr::DRAMAddr(void*)");
   // ==== Try real mapping via kernel module (virt -> phys -> DRAM) ====
   const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
   const long page_size     = ::getpagesize();
+
+  BS_DLOGF("addr=%p virt=0x%llx page_size=%ld", addr, (unsigned long long)virt, page_size);
 
   bool          decoded   = false;
   std::uint64_t phys_addr = 0;
@@ -69,7 +98,7 @@ DRAMAddr::DRAMAddr(void *addr) {
               (pfn * static_cast<std::uint64_t>(page_size)) +
               (virt & (static_cast<std::uint64_t>(page_size) - 1));
 
-          std::cout << phys_addr << ":phys\n";
+          BS_DLOGF("pagemap: pfn=0x%llx phys_addr=0x%llx", (unsigned long long)pfn, (unsigned long long)phys_addr);
           if (auto t = decode_pa_with_kernel(phys_addr)) {
             // Fill in extended fields (your DRAMAddr has these members)
             channel    = t->chan;
@@ -96,16 +125,15 @@ DRAMAddr::DRAMAddr(void *addr) {
   if (decoded) {
     static int printed = 0;
     if (printed < 200) {
-      std::printf(
-          "[DRAMAddr] VA=%p PA=0x%llx chan=%d rank=%d bg=%d bank=%zu row=%zu col=%zu\n",
-          addr,
-          (unsigned long long) phys_addr,
-          channel,
-          rank,
-          bank_group,
-          bank,
-          row,
-          col);
+      BS_DLOGF("kernel decode ok: VA=%p PA=0x%llx chan=%d rank=%d bg=%d bank=%zu row=%zu col=%zu",
+               addr,
+               (unsigned long long)phys_addr,
+               channel,
+               rank,
+               bank_group,
+               bank,
+               row,
+               col);
       printed++;
     }
 
@@ -128,6 +156,9 @@ DRAMAddr::DRAMAddr(void *addr) {
   bank = (l >> MemConfig.BK_SHIFT)  & MemConfig.BK_MASK;
   row  = (l >> MemConfig.ROW_SHIFT) & MemConfig.ROW_MASK;
   col  = (l >> MemConfig.COL_SHIFT) & MemConfig.COL_MASK;
+
+  BS_DLOGF("fallback decode: VA=%p bank=%zu row=%zu col=%zu v(off30)=0x%zx l=0x%zx",
+           addr, bank, row, col, v, l);
 }
 
 size_t DRAMAddr::linearize() const {

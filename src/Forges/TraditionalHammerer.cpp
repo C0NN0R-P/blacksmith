@@ -1,3 +1,11 @@
+/*
+ * ANNOTATION (dev notes)
+ * TraditionalHammerer implements the “classic” Rowhammer loop(s):
+ * pick aggressor addresses, flush/evict as needed, and access them in a tight loop.
+ *
+ * The comments in this file focus on control flow and experiment hygiene (what we do and why),
+ * not on teaching Rowhammer from scratch.
+ */
 #include "Forges/TraditionalHammerer.hpp"
 
 #include "Utilities/TimeHelper.hpp"

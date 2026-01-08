@@ -1,3 +1,15 @@
+/* 
+ * ANNOTATION (dev notes)
+ * Entry point + CLI plumbing.
+ * The main job of this file is to:
+ *   1) parse args / load config,
+ *   2) bring up the Memory backing store,
+ *   3) pick a hammerer mode (traditional / fuzzy / replay),
+ *   4) run, then tear down cleanly.
+ *
+ * The debug macros you see (BS_DLOG/BS_TRACE_SCOPE) are deliberately noisy when enabled,
+ * but they should be compiled out / disabled in normal runs.
+ */
 #include "Blacksmith.hpp"
 
 #include <sys/resource.h>
@@ -7,9 +19,12 @@
 #include <stdexcept>
 #include <string>
 #include <array>
+#include <cerrno>
 
 #include "Forges/TraditionalHammerer.hpp"
 #include "Forges/FuzzyHammerer.hpp"
+
+#include "Utilities/Debug.hpp"
 
 #include <argagg/argagg.hpp>
 #include <argagg/convert/csv.hpp>
@@ -17,6 +32,7 @@
 ProgramArguments program_args;
 
 int check_cpu() {
+  BS_TRACE_SCOPE();
   std::array<char, 128> buffer{};
   std::string cpu_model;
   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("cat /proc/cpuinfo | grep \"model name\" | cut -d':' -f2 | awk '{$1=$1;print}' | head -1", "r"), pclose);
@@ -57,28 +73,46 @@ int check_cpu() {
   return cpu_supported;
 }
 
+// --- Main starts here. Keep side-effects (allocations, mmap, etc.) after arg validation.
+
 int main(int argc, char **argv) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("argc=%d", argc);
+  for (int i = 0; i < argc; i++) {
+    BS_DLOGF("argv[%d]='%s'", i, argv[i]);
+  }
   Logger::initialize();
+
+  BS_DLOG("Logger initialized");
 
   // check if the system's CPU is supported by our hard-coded DRAM address matrices
   check_cpu();
 
+  BS_DLOG("CPU check completed");
+
   handle_args(argc, argv);
+
+  BS_DLOG("Argument handling completed");
 
   // prints the current git commit and some program metadata
   Logger::log_metadata(GIT_COMMIT_HASH, program_args.runtime_limit);
 
   // give this process the highest CPU priority so it can hammer with less interruptions
   int ret = setpriority(PRIO_PROCESS, 0, -20);
+  BS_DLOGF("setpriority(PRIO_PROCESS,0,-20) ret=%d errno=%d", ret, errno);
   if (ret!=0) Logger::log_error("Instruction setpriority failed.");
 
   // allocate a large bulk of contiguous memory
   Memory memory(true);
+  BS_DLOGF("Memory object constructed; hugepages=%s", (true ? "true" : "false"));
   memory.allocate_memory(MEM_SIZE);
+  BS_DLOGF("Memory allocated; MEM_SIZE=%lu start=%p", (unsigned long)MEM_SIZE, memory.get_starting_address());
 
   if (program_args.num_ranks == 1) {
+    BS_DLOG("Initializing DRAMAddr for 1 rank (bank bits=4)");
     DRAMAddr::initialize(4, memory.get_starting_address());
   } else if (program_args.num_ranks == 2) {
+    BS_DLOG("Initializing DRAMAddr for 2 ranks (bank bits=5)");
     DRAMAddr::initialize(5, memory.get_starting_address());
   } else {
     Logger::log_error("Unsupported or missing '--ranks <1|2>' value when DramAnalyzer is disabled.");
@@ -91,10 +125,12 @@ int main(int argc, char **argv) {
   }*/
 
   if (program_args.acts_per_trefi == 0) {
+    BS_DLOG("acts_per_trefi not provided; defaulting to 30000");
     program_args.acts_per_trefi = 30000;
   }
 
   if (!program_args.load_json_filename.empty()) {
+    BS_DLOGF("Replay mode enabled; file='%s' sweeping=%s", program_args.load_json_filename.c_str(), program_args.sweeping ? "true" : "false");
     ReplayingHammerer replayer(memory);
     if (program_args.sweeping) {
       replayer.replay_patterns_brief(program_args.load_json_filename, program_args.pattern_ids,
@@ -103,9 +139,15 @@ int main(int argc, char **argv) {
       replayer.replay_patterns(program_args.load_json_filename, program_args.pattern_ids);
     }
   } else if (program_args.do_fuzzing && program_args.use_synchronization) {
+    BS_DLOGF("Fuzzing mode enabled; acts_per_trefi=%lu runtime_limit=%lu probes=%lu sweeping=%s",
+             (unsigned long)program_args.acts_per_trefi,
+             (unsigned long)program_args.runtime_limit,
+             (unsigned long)program_args.num_address_mappings_per_pattern,
+             program_args.sweeping ? "true" : "false");
     FuzzyHammerer::n_sided_frequency_based_hammering(memory, static_cast<int>(program_args.acts_per_trefi), program_args.runtime_limit,
         program_args.num_address_mappings_per_pattern, program_args.sweeping);
   } else if (!program_args.do_fuzzing) {
+    BS_DLOG("Traditional hammer experiment mode enabled");
 //    TraditionalHammerer::n_sided_hammer(memory, program_args.acts_per_trefi, program_args.runtime_limit);
 //    TraditionalHammerer::n_sided_hammer_experiment(memory, program_args.acts_per_trefi);
     TraditionalHammerer::n_sided_hammer_experiment_frequencies(memory);
@@ -119,6 +161,10 @@ int main(int argc, char **argv) {
 }
 
 void handle_arg_generate_patterns(int num_activations, const size_t probes_per_pattern) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("num_activations=%d probes_per_pattern=%zu", num_activations, probes_per_pattern);
+  BS_TRACE_SCOPE();
+  BS_DLOGF("num_activations=%d probes_per_pattern=%lu", num_activations, (unsigned long)probes_per_pattern);
   // this parameter is defined in FuzzingParameterSet
   const size_t MAX_NUM_REFRESH_INTERVALS = 32;
   const size_t MAX_ACCESSES = num_activations*MAX_NUM_REFRESH_INTERVALS;
@@ -132,6 +178,10 @@ void handle_arg_generate_patterns(int num_activations, const size_t probes_per_p
 }
 
 void handle_args(int argc, char **argv) {
+  BS_TRACE_SCOPE();
+  BS_DLOGF("argc=%d", argc);
+  BS_TRACE_SCOPE();
+  BS_DLOGF("argc=%d", argc);
   // An option is specified by four things:
   //    (1) the name of the option,
   //    (2) the strings that activate the option (flags),

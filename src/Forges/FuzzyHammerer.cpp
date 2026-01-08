@@ -1,3 +1,9 @@
+/*
+ * ANNOTATION (dev notes)
+ * FuzzyHammerer is the exploratory mode: it mutates parameters/patterns and measures outcomes.
+ * Expect lots of “plumbing” here: generating candidate patterns, running them, then recording
+ * whatever signals we can extract (bitflips, ECC errors, timing anomalies, etc.).
+ */
 #include "Forges/FuzzyHammerer.hpp"
 
 #include <Blacksmith.hpp>
@@ -5,6 +11,8 @@
 #include "Utilities/TimeHelper.hpp"
 #include "Fuzzer/PatternBuilder.hpp"
 #include "Forges/ReplayingHammerer.hpp"
+
+#include "Utilities/Debug.hpp"
 
 // initialize the static variables
 size_t FuzzyHammerer::cnt_pattern_probes = 0UL;
@@ -15,6 +23,9 @@ HammeringPattern FuzzyHammerer::hammering_pattern = HammeringPattern(); /* NOLIN
 void FuzzyHammerer::n_sided_frequency_based_hammering(Memory &memory, int acts,
                                                       unsigned long runtime_limit, const size_t probes_per_pattern,
                                                       bool sweep_best_pattern) {
+  BS_TRACE_SCOPE_NAMED("FuzzyHammerer::n_sided_frequency_based_hammering");
+  BS_DLOGF("acts=%d runtime_limit_s=%lu probes_per_pattern=%zu sweep_best_pattern=%s mem_start=%p",
+           acts, runtime_limit, probes_per_pattern, sweep_best_pattern?"true":"false", (void*)memory.get_starting_address());
   std::mt19937 gen = std::mt19937(std::random_device()());
 
   Logger::log_info(

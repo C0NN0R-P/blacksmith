@@ -1,3 +1,11 @@
+/*
+ * ANNOTATION (dev notes)
+ * PatternAddressMapper is the glue between abstract pattern intent and concrete addresses.
+ * Think: “I need aggressors in bank X, row Y±1” -> “here are the actual pointers that satisfy that”.
+ *
+ * A lot of this looks like bookkeeping, but it matters: if we map addresses incorrectly,
+ * the fuzzer will happily explore nonsense.
+ */
 #include "Fuzzer/PatternAddressMapper.hpp"
 
 #include <algorithm>
@@ -58,6 +66,9 @@ void PatternAddressMapper::randomize_addresses(FuzzingParameterSet &fuzzing_para
 
   std::random_device device;
   std::mt19937 engine(device()); // Seed the random number engine
+
+// Address selection tends to be the failure point on new platforms.
+// The logs around this block are there to show *which* constraint filtered out candidates.
   std::vector<int> weights = std::vector<int>({100-prob2, prob2});
   std::discrete_distribution<> dist(weights.begin(), weights.end()); // Create the distribution
 
