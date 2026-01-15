@@ -17,7 +17,6 @@ scripts/run_as_sudo.sh
 
 # build files
 CMakeFiles/*
-build/*
 cmake-build-*
 
 # OSX-related files

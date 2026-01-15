@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/CMakeFiles/argagg-populate"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/CMakeFiles/argagg-populate.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/CMakeFiles/argagg-populate-complete.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-build.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-configure.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-download.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-install.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-patch.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-test.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/argagg-subbuild/argagg-populate-prefix/src/argagg-populate-stamp/argagg-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"argagg-populate"
+		],
+		"name" : "argagg-populate"
+	}
+}

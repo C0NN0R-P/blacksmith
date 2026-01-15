@@ -1,0 +1,2 @@
+/usr/bin/ar qc libSkxDecode.a CMakeFiles/SkxDecode.dir/src/SkxDecode/SkxDecode.cpp.o
+/usr/bin/ranlib libSkxDecode.a

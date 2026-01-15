@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/CMakeFiles/asmjit-populate"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/CMakeFiles/asmjit-populate.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/CMakeFiles/asmjit-populate-complete.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-build.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-configure.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-download.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-install.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-patch.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-test.rule"
+		},
+		{
+			"file" : "/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"asmjit-populate"
+		],
+		"name" : "asmjit-populate"
+	}
+}

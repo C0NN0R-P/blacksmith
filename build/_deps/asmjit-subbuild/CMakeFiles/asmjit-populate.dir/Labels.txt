@@ -1,0 +1,14 @@
+# Target labels
+ asmjit-populate
+# Source files and their labels
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/CMakeFiles/asmjit-populate
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/CMakeFiles/asmjit-populate.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/CMakeFiles/asmjit-populate-complete.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-build.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-configure.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-download.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-install.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-mkdir.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-patch.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-test.rule
+/home/vagrant/blacksmith/build/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/asmjit-populate-update.rule

@@ -1,0 +1,43 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/bs.dir/src/Forges/FuzzyHammerer.cpp.o"
+  "CMakeFiles/bs.dir/src/Forges/FuzzyHammerer.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Forges/ReplayingHammerer.cpp.o"
+  "CMakeFiles/bs.dir/src/Forges/ReplayingHammerer.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Forges/TraditionalHammerer.cpp.o"
+  "CMakeFiles/bs.dir/src/Forges/TraditionalHammerer.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/Aggressor.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/Aggressor.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/AggressorAccessPattern.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/AggressorAccessPattern.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/BitFlip.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/BitFlip.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/CodeJitter.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/CodeJitter.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/FuzzingParameterSet.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/FuzzingParameterSet.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/HammeringPattern.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/HammeringPattern.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/PatternAddressMapper.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/PatternAddressMapper.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Fuzzer/PatternBuilder.cpp.o"
+  "CMakeFiles/bs.dir/src/Fuzzer/PatternBuilder.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Memory/DRAMAddr.cpp.o"
+  "CMakeFiles/bs.dir/src/Memory/DRAMAddr.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Memory/KernelDecode.cpp.o"
+  "CMakeFiles/bs.dir/src/Memory/KernelDecode.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Memory/Memory.cpp.o"
+  "CMakeFiles/bs.dir/src/Memory/Memory.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Memory/SkxDecode.cpp.o"
+  "CMakeFiles/bs.dir/src/Memory/SkxDecode.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Utilities/Enums.cpp.o"
+  "CMakeFiles/bs.dir/src/Utilities/Enums.cpp.o.d"
+  "CMakeFiles/bs.dir/src/Utilities/Logger.cpp.o"
+  "CMakeFiles/bs.dir/src/Utilities/Logger.cpp.o.d"
+  "libbs.a"
+  "libbs.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/bs.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()
