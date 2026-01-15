@@ -76,7 +76,14 @@ class ScopeTrace {
     Logger::log_debug(bs_debug::prefix(__FILE__, __LINE__, __func__) + std::string(" | ") + format_string((FMT), __VA_ARGS__)); \
   } while (0)
 
-#define BS_TRACE_SCOPE() bs_debug::ScopeTrace bs_scope_trace(__func__, __FILE__, __LINE__, __func__)
-#define BS_TRACE_SCOPE_NAMED(NAME) bs_debug::ScopeTrace bs_scope_trace(NAME, __FILE__, __LINE__, __func__)
+#define BS_TRACE_JOIN2(a, b) a##b
+#define BS_TRACE_JOIN(a, b) BS_TRACE_JOIN2(a, b)
+
+#define BS_TRACE_SCOPE() \
+  bs_debug::ScopeTrace BS_TRACE_JOIN(bs_scope_trace_, __LINE__)(__func__, __FILE__, __LINE__, __func__)
+
+#define BS_TRACE_SCOPE_NAMED(NAME) \
+  bs_debug::ScopeTrace BS_TRACE_JOIN(bs_scope_trace_, __LINE__)((NAME), __FILE__, __LINE__, __func__)
+
 
 #endif  // BLACKSMITH_INCLUDE_DEBUG_HPP_
