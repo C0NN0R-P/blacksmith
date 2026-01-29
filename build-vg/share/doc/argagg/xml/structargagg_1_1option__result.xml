@@ -1,0 +1,119 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1option__result" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::option_result</compoundname>
+    <includes refid="argagg_8hpp" local="no">argagg.hpp</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structargagg_1_1option__result_1a10cf3c02b1c5e5d57f6b9f41b622da46" prot="public" static="no" mutable="no">
+        <type>const char *</type>
+        <definition>const char* argagg::option_result::arg</definition>
+        <argsstring></argsstring>
+        <name>arg</name>
+        <briefdescription>
+<para>Argument parsed for this single option. If no argument was parsed this will be set to nullptr. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="271" column="14" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="271" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structargagg_1_1option__result_1acad0ebe8b52f37b25c6955b406ff809f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::option_result::as</definition>
+        <argsstring>() const</argsstring>
+        <name>as</name>
+        <briefdescription>
+<para>Converts the argument parsed for this single option instance into the given type using the type matched conversion function <ref refid="namespaceargagg_1_1convert_1acbfa15a31486143d3c2032b4ac78fa96" kindref="member">argagg::convert::arg()</ref>. If there was not an argument parsed for this single option instance then a <ref refid="structargagg_1_1option__lacks__argument__error" kindref="compound">argagg::option_lacks_argument_error</ref> exception is thrown. The specific conversion function may throw other exceptions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="283" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="736" bodyend="743"/>
+        <references refid="structargagg_1_1option__result_1a10cf3c02b1c5e5d57f6b9f41b622da46" compoundref="argagg_8hpp" startline="271">arg</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__result_1ae23be242ceea523b30659d07ebda12d5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::option_result::as</definition>
+        <argsstring>(const T &amp;t) const</argsstring>
+        <name>as</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+<para>Converts the argument parsed for this single option instance into the given type using the type matched conversion function <ref refid="namespaceargagg_1_1convert_1acbfa15a31486143d3c2032b4ac78fa96" kindref="member">argagg::convert::arg()</ref>. If there was not an argument parsed for this single option instance then the provided default value is returned instead. If the conversion function throws an exception then it is ignored and the default value is returned. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="295" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="747" bodyend="763"/>
+        <references refid="structargagg_1_1option__result_1a10cf3c02b1c5e5d57f6b9f41b622da46" compoundref="argagg_8hpp" startline="271">arg</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__result_1a7f6b5f2b7a5a7ca4aa5e9219e28fb62f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>argagg::option_result::operator T</definition>
+        <argsstring>() const</argsstring>
+        <name>operator T</name>
+        <briefdescription>
+<para>Since we have the <ref refid="structargagg_1_1option__result_1acad0ebe8b52f37b25c6955b406ff809f" kindref="member">argagg::option_result::as()</ref> API we might as well alias it as an implicit conversion operator. This performs implicit conversion using the <ref refid="structargagg_1_1option__result_1acad0ebe8b52f37b25c6955b406ff809f" kindref="member">argagg::option_result::as()</ref> method. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>An implicit boolean conversion specialization exists which returns false if there is no argument for this single option instance and true otherwise. This specialization DOES NOT convert the argument to a bool. If you need to convert the argument to a bool then use the <ref refid="structargagg_1_1option__result_1acad0ebe8b52f37b25c6955b406ff809f" kindref="member">as()</ref> API. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="310" column="3" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="767" bodyend="770"/>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__result_1a22f5e91d36266275de14db491b917544" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::option_result::operator!</definition>
+        <argsstring>() const</argsstring>
+        <name>operator!</name>
+        <briefdescription>
+<para>Explicitly define a unary not operator that wraps the implicit boolean conversion specialization in case the compiler can&apos;t do it automatically. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="317" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="781" bodyend="784"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Represents a single option parse result. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>You can check if this has an argument by using the implicit boolean conversion. </para>
+    </detaileddescription>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="264" column="1" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="264" bodyend="319"/>
+    <listofallmembers>
+      <member refid="structargagg_1_1option__result_1a10cf3c02b1c5e5d57f6b9f41b622da46" prot="public" virt="non-virtual"><scope>argagg::option_result</scope><name>arg</name></member>
+      <member refid="structargagg_1_1option__result_1acad0ebe8b52f37b25c6955b406ff809f" prot="public" virt="non-virtual"><scope>argagg::option_result</scope><name>as</name></member>
+      <member refid="structargagg_1_1option__result_1ae23be242ceea523b30659d07ebda12d5" prot="public" virt="non-virtual"><scope>argagg::option_result</scope><name>as</name></member>
+      <member refid="structargagg_1_1option__result_1a7f6b5f2b7a5a7ca4aa5e9219e28fb62f" prot="public" virt="non-virtual"><scope>argagg::option_result</scope><name>operator T</name></member>
+      <member refid="structargagg_1_1option__result_1a22f5e91d36266275de14db491b917544" prot="public" virt="non-virtual"><scope>argagg::option_result</scope><name>operator!</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

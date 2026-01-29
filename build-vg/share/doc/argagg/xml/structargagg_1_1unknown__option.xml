@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1unknown__option" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::unknown_option</compoundname>
+    <basecompoundref refid="cpp/error/runtime_error" prot="public" virt="non-virtual">std::runtime_error</basecompoundref>
+    <includes refid="argagg_8hpp" local="no">argagg.hpp</includes>
+    <briefdescription>
+<para>This exception is thrown when an unknown option is requested by name from an <ref refid="structargagg_1_1parser__results" kindref="compound">argagg::parser_results</ref> through the indexing operator ([]). </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>argagg::unknown_option</label>
+        <link refid="structargagg_1_1unknown__option"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::runtime_error</label>
+        <link refid="cpp/error/runtime_error" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::exception</label>
+        <link refid="cpp/error/exception" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>argagg::unknown_option</label>
+        <link refid="structargagg_1_1unknown__option"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::runtime_error</label>
+        <link refid="cpp/error/runtime_error" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::exception</label>
+        <link refid="cpp/error/exception" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+    </collaborationgraph>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="152" column="1" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="153" bodyend="155"/>
+    <listofallmembers>
+      <member refid="cpp/error/exception/exception_1" prot="public" virt="non-virtual"><scope>argagg::unknown_option</scope><name>exception</name></member>
+      <member refid="cpp/error/exception/operator=_1" prot="public" virt="non-virtual"><scope>argagg::unknown_option</scope><name>operator=</name></member>
+      <member refid="cpp/error/runtime_error_1" prot="public" virt="non-virtual"><scope>argagg::unknown_option</scope><name>runtime_error</name></member>
+      <member refid="cpp/error/exception/what_1" prot="public" virt="non-virtual"><scope>argagg::unknown_option</scope><name>what</name></member>
+      <member refid="cpp/error/exception/~exception_1" prot="public" virt="non-virtual"><scope>argagg::unknown_option</scope><name>~exception</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

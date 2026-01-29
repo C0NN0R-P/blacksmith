@@ -1,0 +1,6 @@
+==418867== Memcheck, a memory error detector
+==418867== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==418867== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+==418867== Command: ./blacksmith --dimm-id 1 --ranks 1 --runtime-limit 5 --acts-per-ref 1000 --probes 1
+==418867== Parent PID: 418866
+==418867== 

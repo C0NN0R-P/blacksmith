@@ -1,0 +1,491 @@
+==418866== Memcheck, a memory error detector
+==418866== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==418866== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+==418866== Command: ./blacksmith --dimm-id 1 --ranks 1 --runtime-limit 5 --acts-per-ref 1000 --probes 1
+==418866== Parent PID: 418865
+==418866== 
+vex amd64->IR: unhandled instruction bytes: 0x66 0xF 0xAE 0x38 0x48 0xC7 0xC0 0x0 0x0 0xF0
+vex amd64->IR:   REX=0 REX.W=0 REX.R=0 REX.X=0 REX.B=0
+vex amd64->IR:   VEX=0 VEX.L=0 VEX.nVVVV=0x0 ESC=0F
+vex amd64->IR:   PFX.66=1 PFX.F2=0 PFX.F3=0
+==418866== Invalid read of size 8
+==418866==    at 0xA432011: ???
+==418866==    by 0x12BE58: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:321)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866==  Address 0x11f00000 is not stack'd, malloc'd or (recently) free'd
+==418866== 
+==418866== 
+==418866== Process terminating with default action of signal 11 (SIGSEGV)
+==418866==  Access not within mapped region at address 0x11F00000
+==418866==    at 0xA432011: ???
+==418866==    by 0x12BE58: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:321)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866==  If you believe this happened as a result of a stack
+==418866==  overflow in your program's main thread (unlikely but
+==418866==  possible), you can try to increase the size of the
+==418866==  main thread stack using the --main-stacksize= flag.
+==418866==  The main thread stack size used in this run was 8388608.
+==418866== 
+==418866== HEAP SUMMARY:
+==418866==     in use at exit: 84,187,484 bytes in 317 blocks
+==418866==   total heap usage: 928 allocs, 611 frees, 86,173,196 bytes allocated
+==418866== 
+==418866== 4 bytes in 1 blocks are still reachable in loss record 1 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x138F1C: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_create_storage(unsigned long) (stl_vector.h:361)
+==418866==    by 0x134126: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_Vector_base(unsigned long, std::allocator<Aggressor> const&) (stl_vector.h:305)
+==418866==    by 0x13046A: std::vector<Aggressor, std::allocator<Aggressor> >::vector(std::vector<Aggressor, std::allocator<Aggressor> > const&) (stl_vector.h:555)
+==418866==    by 0x1B5630: AggressorAccessPattern::AggressorAccessPattern(unsigned long, int, std::vector<Aggressor, std::allocator<Aggressor> >&, unsigned long) (AggressorAccessPattern.hpp:38)
+==418866==    by 0x1B6BFE: void __gnu_cxx::new_allocator<AggressorAccessPattern>::construct<AggressorAccessPattern, int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&>(AggressorAccessPattern*, int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&) (new_allocator.h:162)
+==418866==    by 0x1B6574: void std::allocator_traits<std::allocator<AggressorAccessPattern> >::construct<AggressorAccessPattern, int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&>(std::allocator<AggressorAccessPattern>&, AggressorAccessPattern*, int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&) (alloc_traits.h:516)
+==418866==    by 0x1B5C28: AggressorAccessPattern& std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> >::emplace_back<int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&>(int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&) (vector.tcc:115)
+==418866==    by 0x1B508D: PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet&, int, int) (PatternBuilder.cpp:203)
+==418866== 
+==418866== 8 bytes in 1 blocks are still reachable in loss record 2 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x1358DF: Aggressor* std::vector<Aggressor, std::allocator<Aggressor> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > > >(unsigned long, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >) (stl_vector.h:1511)
+==418866==    by 0x131061: std::vector<Aggressor, std::allocator<Aggressor> >::operator=(std::vector<Aggressor, std::allocator<Aggressor> > const&) (vector.tcc:226)
+==418866==    by 0x1869E4: AggressorAccessPattern::operator=(AggressorAccessPattern const&) (AggressorAccessPattern.cpp:54)
+==418866==    by 0x139979: std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<AggressorAccessPattern> >, std::is_move_constructible<AggressorAccessPattern>, std::is_move_assignable<AggressorAccessPattern> >::value, void>::type std::swap<AggressorAccessPattern>(AggressorAccessPattern&, AggressorAccessPattern&) (move.h:205)
+==418866==    by 0x134CF1: void std::iter_swap<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > > >(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >) (stl_algobase.h:182)
+==418866==    by 0x1309E5: void std::shuffle<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&>(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&) (stl_algo.h:3767)
+==418866==    by 0x129659: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:64)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 8 bytes in 1 blocks are still reachable in loss record 3 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x1358DF: Aggressor* std::vector<Aggressor, std::allocator<Aggressor> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > > >(unsigned long, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >) (stl_vector.h:1511)
+==418866==    by 0x131061: std::vector<Aggressor, std::allocator<Aggressor> >::operator=(std::vector<Aggressor, std::allocator<Aggressor> > const&) (vector.tcc:226)
+==418866==    by 0x1869E4: AggressorAccessPattern::operator=(AggressorAccessPattern const&) (AggressorAccessPattern.cpp:54)
+==418866==    by 0x139997: std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<AggressorAccessPattern> >, std::is_move_constructible<AggressorAccessPattern>, std::is_move_assignable<AggressorAccessPattern> >::value, void>::type std::swap<AggressorAccessPattern>(AggressorAccessPattern&, AggressorAccessPattern&) (move.h:206)
+==418866==    by 0x134CF1: void std::iter_swap<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > > >(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >) (stl_algobase.h:182)
+==418866==    by 0x130A92: void std::shuffle<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&>(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&) (stl_algo.h:3782)
+==418866==    by 0x129659: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:64)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 16 bytes in 2 blocks are still reachable in loss record 4 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x1358DF: Aggressor* std::vector<Aggressor, std::allocator<Aggressor> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > > >(unsigned long, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >) (stl_vector.h:1511)
+==418866==    by 0x131061: std::vector<Aggressor, std::allocator<Aggressor> >::operator=(std::vector<Aggressor, std::allocator<Aggressor> > const&) (vector.tcc:226)
+==418866==    by 0x1869E4: AggressorAccessPattern::operator=(AggressorAccessPattern const&) (AggressorAccessPattern.cpp:54)
+==418866==    by 0x139997: std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<AggressorAccessPattern> >, std::is_move_constructible<AggressorAccessPattern>, std::is_move_assignable<AggressorAccessPattern> >::value, void>::type std::swap<AggressorAccessPattern>(AggressorAccessPattern&, AggressorAccessPattern&) (move.h:206)
+==418866==    by 0x134CF1: void std::iter_swap<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > > >(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >) (stl_algobase.h:182)
+==418866==    by 0x130A5D: void std::shuffle<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&>(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&) (stl_algo.h:3781)
+==418866==    by 0x129659: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:64)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 24 bytes in 1 blocks are still reachable in loss record 5 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x17179D: __gnu_cxx::new_allocator<double>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x16AE7E: std::allocator_traits<std::allocator<double> >::allocate(std::allocator<double>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x166B39: std::_Vector_base<double, std::allocator<double> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x15F50B: double* std::vector<double, std::allocator<double> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > > >(unsigned long, __gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >, __gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >) (stl_vector.h:1511)
+==418866==    by 0x15B921: std::vector<double, std::allocator<double> >::operator=(std::vector<double, std::allocator<double> > const&) (vector.tcc:226)
+==418866==    by 0x157562: std::discrete_distribution<int>::param_type::operator=(std::discrete_distribution<int>::param_type const&) (random.h:5314)
+==418866==    by 0x1575AA: std::discrete_distribution<int>::operator=(std::discrete_distribution<int>&&) (random.h:5279)
+==418866==    by 0x195C3D: FuzzingParameterSet::set_distribution(Range<int>, std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<int const, int> > >) (FuzzingParameterSet.cpp:63)
+==418866==    by 0x196447: FuzzingParameterSet::randomize_parameters(bool) (FuzzingParameterSet.cpp:152)
+==418866==    by 0x19497A: FuzzingParameterSet::FuzzingParameterSet(int) (FuzzingParameterSet.cpp:20)
+==418866==    by 0x1292FD: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:26)
+==418866== 
+==418866== 24 bytes in 1 blocks are still reachable in loss record 6 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x17179D: __gnu_cxx::new_allocator<double>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x16AE7E: std::allocator_traits<std::allocator<double> >::allocate(std::allocator<double>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x166B39: std::_Vector_base<double, std::allocator<double> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x15F50B: double* std::vector<double, std::allocator<double> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > > >(unsigned long, __gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >, __gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >) (stl_vector.h:1511)
+==418866==    by 0x15B921: std::vector<double, std::allocator<double> >::operator=(std::vector<double, std::allocator<double> > const&) (vector.tcc:226)
+==418866==    by 0x15757D: std::discrete_distribution<int>::param_type::operator=(std::discrete_distribution<int>::param_type const&) (random.h:5314)
+==418866==    by 0x1575AA: std::discrete_distribution<int>::operator=(std::discrete_distribution<int>&&) (random.h:5279)
+==418866==    by 0x195C3D: FuzzingParameterSet::set_distribution(Range<int>, std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<int const, int> > >) (FuzzingParameterSet.cpp:63)
+==418866==    by 0x196447: FuzzingParameterSet::randomize_parameters(bool) (FuzzingParameterSet.cpp:152)
+==418866==    by 0x19497A: FuzzingParameterSet::FuzzingParameterSet(int) (FuzzingParameterSet.cpp:20)
+==418866==    by 0x1292FD: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:26)
+==418866== 
+==418866== 24 bytes in 1 blocks are still reachable in loss record 7 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1425AA: __gnu_cxx::new_allocator<std::vector<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >, std::allocator<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > > >::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13E7DD: std::allocator_traits<std::allocator<std::vector<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >, std::allocator<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > > > >::allocate(std::allocator<std::vector<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >, std::allocator<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > > >&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x139458: std::vector<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >, std::allocator<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > >* nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >::create<std::vector<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >, std::allocator<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > >, nlohmann::detail::json_ref<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > const*, nlohmann::detail::json_ref<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > const*>(nlohmann::detail::json_ref<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > const*&&, nlohmann::detail::json_ref<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > const*&&) (json.hpp:17415)
+==418866==    by 0x134714: nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >::basic_json(std::initializer_list<nlohmann::detail::json_ref<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > >, bool, nlohmann::detail::value_t) (json.hpp:18133)
+==418866==    by 0x13069F: nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > >::array(std::initializer_list<nlohmann::detail::json_ref<nlohmann::basic_json<std::map, std::vector, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char> > > > >) (json.hpp:18272)
+==418866==    by 0x12934F: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:32)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 24 bytes in 1 blocks are still reachable in loss record 8 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1448C8: __gnu_cxx::new_allocator<std::vector<BitFlip, std::allocator<BitFlip> > >::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x141397: std::allocator_traits<std::allocator<std::vector<BitFlip, std::allocator<BitFlip> > > >::allocate(std::allocator<std::vector<BitFlip, std::allocator<BitFlip> > >&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13D6DF: std::_Vector_base<std::vector<BitFlip, std::allocator<BitFlip> >, std::allocator<std::vector<BitFlip, std::allocator<BitFlip> > > >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x138256: void std::vector<std::vector<BitFlip, std::allocator<BitFlip> >, std::allocator<std::vector<BitFlip, std::allocator<BitFlip> > > >::_M_realloc_insert<>(__gnu_cxx::__normal_iterator<std::vector<BitFlip, std::allocator<BitFlip> >*, std::vector<std::vector<BitFlip, std::allocator<BitFlip> >, std::allocator<std::vector<BitFlip, std::allocator<BitFlip> > > > >) (vector.tcc:440)
+==418866==    by 0x1333D1: std::vector<BitFlip, std::allocator<BitFlip> >& std::vector<std::vector<BitFlip, std::allocator<BitFlip> >, std::allocator<std::vector<BitFlip, std::allocator<BitFlip> > > >::emplace_back<>() (vector.tcc:121)
+==418866==    by 0x12BCAE: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:299)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 32 bytes in 4 blocks are still reachable in loss record 9 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x1358DF: Aggressor* std::vector<Aggressor, std::allocator<Aggressor> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > > >(unsigned long, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >) (stl_vector.h:1511)
+==418866==    by 0x131061: std::vector<Aggressor, std::allocator<Aggressor> >::operator=(std::vector<Aggressor, std::allocator<Aggressor> > const&) (vector.tcc:226)
+==418866==    by 0x1869E4: AggressorAccessPattern::operator=(AggressorAccessPattern const&) (AggressorAccessPattern.cpp:54)
+==418866==    by 0x139979: std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<AggressorAccessPattern> >, std::is_move_constructible<AggressorAccessPattern>, std::is_move_assignable<AggressorAccessPattern> >::value, void>::type std::swap<AggressorAccessPattern>(AggressorAccessPattern&, AggressorAccessPattern&) (move.h:205)
+==418866==    by 0x134CF1: void std::iter_swap<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > > >(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >) (stl_algobase.h:182)
+==418866==    by 0x130A92: void std::shuffle<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&>(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&) (stl_algo.h:3782)
+==418866==    by 0x129659: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:64)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 37 bytes in 1 blocks are still reachable in loss record 10 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4A1B0BD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A1C25D: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_replace(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A15759: std::__cxx11::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::str() const (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x19B0C8: uuid::gen_uuid() (Uuid.hpp:42)
+==418866==    by 0x19C0C4: HammeringPattern::HammeringPattern() (HammeringPattern.cpp:46)
+==418866==    by 0x12936D: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:38)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 37 bytes in 1 blocks are still reachable in loss record 11 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4A1B0BD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A1C25D: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_replace(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A15759: std::__cxx11::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::str() const (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x1A166A: uuid::gen_uuid() (Uuid.hpp:42)
+==418866==    by 0x1A171F: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:12)
+==418866==    by 0x12937C: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:39)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 37 bytes in 1 blocks are still reachable in loss record 12 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4A1B0BD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A1C25D: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_replace(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A15759: std::__cxx11::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::str() const (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x19B0C8: uuid::gen_uuid() (Uuid.hpp:42)
+==418866==    by 0x19C01D: HammeringPattern::HammeringPattern(int) (HammeringPattern.cpp:38)
+==418866==    by 0x12948C: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:53)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 37 bytes in 1 blocks are still reachable in loss record 13 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4A1B0BD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A1C25D: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_replace(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A15759: std::__cxx11::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::str() const (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x1A166A: uuid::gen_uuid() (Uuid.hpp:42)
+==418866==    by 0x1A171F: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:12)
+==418866==    by 0x129683: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:69)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 40 bytes in 5 blocks are still reachable in loss record 14 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x1358DF: Aggressor* std::vector<Aggressor, std::allocator<Aggressor> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > > >(unsigned long, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >, __gnu_cxx::__normal_iterator<Aggressor const*, std::vector<Aggressor, std::allocator<Aggressor> > >) (stl_vector.h:1511)
+==418866==    by 0x131061: std::vector<Aggressor, std::allocator<Aggressor> >::operator=(std::vector<Aggressor, std::allocator<Aggressor> > const&) (vector.tcc:226)
+==418866==    by 0x1869E4: AggressorAccessPattern::operator=(AggressorAccessPattern const&) (AggressorAccessPattern.cpp:54)
+==418866==    by 0x139979: std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<AggressorAccessPattern> >, std::is_move_constructible<AggressorAccessPattern>, std::is_move_assignable<AggressorAccessPattern> >::value, void>::type std::swap<AggressorAccessPattern>(AggressorAccessPattern&, AggressorAccessPattern&) (move.h:205)
+==418866==    by 0x134CF1: void std::iter_swap<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > > >(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >) (stl_algobase.h:182)
+==418866==    by 0x130A5D: void std::shuffle<__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&>(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, __gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&) (stl_algo.h:3781)
+==418866==    by 0x129659: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:64)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 48 bytes in 1 blocks are still reachable in loss record 15 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x18DC53: CodeJitter::CodeJitter() (CodeJitter.cpp:10)
+==418866==    by 0x1A5F9A: std::_MakeUniq<CodeJitter>::__single_object std::make_unique<CodeJitter>() (unique_ptr.h:962)
+==418866==    by 0x1A17C6: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:13)
+==418866==    by 0x12937C: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:39)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 48 bytes in 1 blocks are still reachable in loss record 16 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x18DC53: CodeJitter::CodeJitter() (CodeJitter.cpp:10)
+==418866==    by 0x1A5F9A: std::_MakeUniq<CodeJitter>::__single_object std::make_unique<CodeJitter>() (unique_ptr.h:962)
+==418866==    by 0x1A17C6: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:13)
+==418866==    by 0x129683: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:69)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 64 bytes in 1 blocks are still reachable in loss record 17 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1A5F8B: std::_MakeUniq<CodeJitter>::__single_object std::make_unique<CodeJitter>() (unique_ptr.h:962)
+==418866==    by 0x1A17C6: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:13)
+==418866==    by 0x12937C: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:39)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 64 bytes in 1 blocks are still reachable in loss record 18 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1A5F8B: std::_MakeUniq<CodeJitter>::__single_object std::make_unique<CodeJitter>() (unique_ptr.h:962)
+==418866==    by 0x1A17C6: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:13)
+==418866==    by 0x129683: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:69)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 104 bytes in 1 blocks are still reachable in loss record 19 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x487391A: JitAllocatorImpl_newBlock (jitallocator.cpp:526)
+==418866==    by 0x487391A: asmjit::JitAllocator::alloc(void**, void**, unsigned long) (jitallocator.cpp:802)
+==418866==    by 0x48746E2: asmjit::JitRuntime::_add(void**, asmjit::CodeHolder*) (jitruntime.cpp:82)
+==418866==    by 0x190D83: unsigned int asmjit::JitRuntime::add<int (*)()>(int (**)(), asmjit::CodeHolder*) (jitruntime.h:90)
+==418866==    by 0x18EF0A: CodeJitter::jit_strict(int, FLUSHING_STRATEGY, FENCING_STRATEGY, std::vector<char volatile*, std::allocator<char volatile*> > const&, bool, int, int) (CodeJitter.cpp:216)
+==418866==    by 0x12BC7A: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:292)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 144 bytes in 1 blocks are still reachable in loss record 20 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4872F18: JitAllocatorImpl_new (jitallocator.cpp:448)
+==418866==    by 0x4872F18: asmjit::JitAllocator::JitAllocator(asmjit::JitAllocator::CreateParams const*) (jitallocator.cpp:643)
+==418866==    by 0x48748AE: asmjit::JitRuntime::JitRuntime(asmjit::JitAllocator::CreateParams const*) (jitruntime.cpp:59)
+==418866==    by 0x18DBFD: CodeJitter::CodeJitter() (CodeJitter.cpp:8)
+==418866==    by 0x1A5F9A: std::_MakeUniq<CodeJitter>::__single_object std::make_unique<CodeJitter>() (unique_ptr.h:962)
+==418866==    by 0x1A17C6: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:13)
+==418866==    by 0x12937C: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:39)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 144 bytes in 1 blocks are still reachable in loss record 21 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4872F18: JitAllocatorImpl_new (jitallocator.cpp:448)
+==418866==    by 0x4872F18: asmjit::JitAllocator::JitAllocator(asmjit::JitAllocator::CreateParams const*) (jitallocator.cpp:643)
+==418866==    by 0x48748AE: asmjit::JitRuntime::JitRuntime(asmjit::JitAllocator::CreateParams const*) (jitruntime.cpp:59)
+==418866==    by 0x18DBFD: CodeJitter::CodeJitter() (CodeJitter.cpp:8)
+==418866==    by 0x1A5F9A: std::_MakeUniq<CodeJitter>::__single_object std::make_unique<CodeJitter>() (unique_ptr.h:962)
+==418866==    by 0x1A17C6: PatternAddressMapper::PatternAddressMapper() (PatternAddressMapper.cpp:13)
+==418866==    by 0x129683: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:69)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 148 bytes in 20 blocks are still reachable in loss record 22 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x138F1C: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_create_storage(unsigned long) (stl_vector.h:361)
+==418866==    by 0x134126: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_Vector_base(unsigned long, std::allocator<Aggressor> const&) (stl_vector.h:305)
+==418866==    by 0x13046A: std::vector<Aggressor, std::allocator<Aggressor> >::vector(std::vector<Aggressor, std::allocator<Aggressor> > const&) (stl_vector.h:555)
+==418866==    by 0x139916: AggressorAccessPattern::AggressorAccessPattern(AggressorAccessPattern const&) (AggressorAccessPattern.hpp:43)
+==418866==    by 0x14458B: void std::_Construct<AggressorAccessPattern, AggressorAccessPattern const&>(AggressorAccessPattern*, AggressorAccessPattern const&) (stl_construct.h:119)
+==418866==    by 0x17467F: AggressorAccessPattern* std::__uninitialized_copy<false>::__uninit_copy<AggressorAccessPattern const*, AggressorAccessPattern*>(AggressorAccessPattern const*, AggressorAccessPattern const*, AggressorAccessPattern*) (stl_uninitialized.h:92)
+==418866==    by 0x171720: AggressorAccessPattern* std::uninitialized_copy<AggressorAccessPattern const*, AggressorAccessPattern*>(AggressorAccessPattern const*, AggressorAccessPattern const*, AggressorAccessPattern*) (stl_uninitialized.h:151)
+==418866==    by 0x16AE2C: AggressorAccessPattern* std::__uninitialized_copy_a<AggressorAccessPattern const*, AggressorAccessPattern*, AggressorAccessPattern>(AggressorAccessPattern const*, AggressorAccessPattern const*, AggressorAccessPattern*, std::allocator<AggressorAccessPattern>&) (stl_uninitialized.h:333)
+==418866== 
+==418866== 472 bytes in 1 blocks are still reachable in loss record 23 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4C8364D: __fopen_internal (iofopen.c:65)
+==418866==    by 0x4C8364D: fopen@@GLIBC_2.2.5 (iofopen.c:86)
+==418866==    by 0x499FBB3: std::__basic_file<char>::open(char const*, std::_Ios_Openmode, int) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x49E7FFD: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x49E8126: std::basic_ofstream<char, std::char_traits<char> >::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x1C6F08: Logger::initialize() (Logger.cpp:17)
+==418866==    by 0x111623: main (Blacksmith.cpp:61)
+==418866== 
+==418866== 472 bytes in 1 blocks are still reachable in loss record 24 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x126E99: __gnu_cxx::new_allocator<std::__detail::_Hash_node_base*>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x12629C: std::allocator_traits<std::allocator<std::__detail::_Hash_node_base*> >::allocate(std::allocator<std::__detail::_Hash_node_base*>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x176FAE: std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false> > >::_M_allocate_buckets(unsigned long) (hashtable_policy.h:1927)
+==418866==    by 0x17449C: std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_allocate_buckets(unsigned long) (hashtable.h:440)
+==418866==    by 0x1711E0: std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_rehash_aux(unsigned long, std::integral_constant<bool, true>) (hashtable.h:2382)
+==418866==    by 0x16A855: std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_rehash(unsigned long, unsigned long const&) (hashtable.h:2361)
+==418866==    by 0x165FBB: std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false>*, unsigned long) (hashtable.h:2021)
+==418866==    by 0x1A9D28: std::pair<std::__detail::_Node_iterator<std::pair<int const, DRAMAddr>, false, false>, bool> std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_emplace<std::pair<int, DRAMAddr> >(std::integral_constant<bool, true>, std::pair<int, DRAMAddr>&&) (hashtable.h:1975)
+==418866==    by 0x1A7E67: std::pair<std::__detail::_Node_iterator<std::pair<int const, DRAMAddr>, false, false>, bool> std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::emplace<std::pair<int, DRAMAddr> >(std::pair<int, DRAMAddr>&&) (hashtable.h:915)
+==418866==    by 0x1A648B: std::enable_if<std::is_constructible<std::pair<int const, DRAMAddr>, std::pair<int, DRAMAddr>&&>::value, std::pair<std::__detail::_Node_iterator<std::pair<int const, DRAMAddr>, false, false>, bool> >::type std::unordered_map<int, DRAMAddr, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<int const, DRAMAddr> > >::insert<std::pair<int, DRAMAddr> >(std::pair<int, DRAMAddr>&&) (unordered_map.h:564)
+==418866==    by 0x1A248A: PatternAddressMapper::randomize_addresses(FuzzingParameterSet&, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > const&, bool) (PatternAddressMapper.cpp:129)
+==418866== 
+==418866== 1,024 bytes in 1 blocks are still reachable in loss record 25 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4C82BA3: _IO_file_doallocate (filedoalloc.c:101)
+==418866==    by 0x4C91CDF: _IO_doallocbuf (genops.c:347)
+==418866==    by 0x4C90F5F: _IO_file_overflow@@GLIBC_2.2.5 (fileops.c:744)
+==418866==    by 0x4C8F6D4: _IO_new_file_xsputn (fileops.c:1243)
+==418866==    by 0x4C8F6D4: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1196)
+==418866==    by 0x4C83FD6: fwrite (iofwrite.c:39)
+==418866==    by 0x4A0BB64: std::basic_ostream<char, std::char_traits<char> >& std::__ostream_insert<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*, long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x4A0BEBA: std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x1C6EA2: Logger::initialize() (Logger.cpp:15)
+==418866==    by 0x111623: main (Blacksmith.cpp:61)
+==418866== 
+==418866== 1,152 bytes in 2 blocks are still reachable in loss record 26 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1BC295: __gnu_cxx::new_allocator<std::_Rb_tree_node<std::pair<unsigned long const, MemConfiguration> > >::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x1BBD8B: std::allocator_traits<std::allocator<std::_Rb_tree_node<std::pair<unsigned long const, MemConfiguration> > > >::allocate(std::allocator<std::_Rb_tree_node<std::pair<unsigned long const, MemConfiguration> > >&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x1BB05A: std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_M_get_node() (stl_tree.h:561)
+==418866==    by 0x1BC7CD: std::_Rb_tree_node<std::pair<unsigned long const, MemConfiguration> >* std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_M_create_node<std::pair<unsigned long const, MemConfiguration> const&>(std::pair<unsigned long const, MemConfiguration> const&) (stl_tree.h:611)
+==418866==    by 0x1BC1B7: std::_Rb_tree_node<std::pair<unsigned long const, MemConfiguration> >* std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_Reuse_or_alloc_node::operator()<std::pair<unsigned long const, MemConfiguration> const&>(std::pair<unsigned long const, MemConfiguration> const&) (stl_tree.h:476)
+==418866==    by 0x1BBC77: std::_Rb_tree_iterator<std::pair<unsigned long const, MemConfiguration> > std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_M_insert_<std::pair<unsigned long const, MemConfiguration> const&, std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_Reuse_or_alloc_node>(std::_Rb_tree_node_base*, std::_Rb_tree_node_base*, std::pair<unsigned long const, MemConfiguration> const&, std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_Reuse_or_alloc_node&) (stl_tree.h:1784)
+==418866==    by 0x1BAE96: std::_Rb_tree_iterator<std::pair<unsigned long const, MemConfiguration> > std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_M_insert_unique_<std::pair<unsigned long const, MemConfiguration> const&, std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_Reuse_or_alloc_node>(std::_Rb_tree_const_iterator<std::pair<unsigned long const, MemConfiguration> >, std::pair<unsigned long const, MemConfiguration> const&, std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_Reuse_or_alloc_node&) (stl_tree.h:2237)
+==418866==    by 0x1B9CB7: void std::_Rb_tree<unsigned long, std::pair<unsigned long const, MemConfiguration>, std::_Select1st<std::pair<unsigned long const, MemConfiguration> >, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::_M_assign_unique<std::pair<unsigned long const, MemConfiguration> const*>(std::pair<unsigned long const, MemConfiguration> const*, std::pair<unsigned long const, MemConfiguration> const*) (stl_tree.h:1711)
+==418866==    by 0x1B932B: std::map<unsigned long, MemConfiguration, std::less<unsigned long>, std::allocator<std::pair<unsigned long const, MemConfiguration> > >::operator=(std::initializer_list<std::pair<unsigned long const, MemConfiguration> >) (stl_map.h:339)
+==418866==    by 0x1B8533: DRAMAddr::initialize_configs() (DRAMAddr.cpp:363)
+==418866==    by 0x1B70D8: DRAMAddr::load_mem_config(unsigned long) (DRAMAddr.cpp:37)
+==418866== 
+==418866== 1,792 bytes in 1 blocks are still reachable in loss record 27 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4873945: JitAllocatorImpl_newBlock (jitallocator.cpp:532)
+==418866==    by 0x4873945: asmjit::JitAllocator::alloc(void**, void**, unsigned long) (jitallocator.cpp:802)
+==418866==    by 0x48746E2: asmjit::JitRuntime::_add(void**, asmjit::CodeHolder*) (jitruntime.cpp:82)
+==418866==    by 0x190D83: unsigned int asmjit::JitRuntime::add<int (*)()>(int (**)(), asmjit::CodeHolder*) (jitruntime.h:90)
+==418866==    by 0x18EF0A: CodeJitter::jit_strict(int, FLUSHING_STRATEGY, FENCING_STRATEGY, std::vector<char volatile*, std::allocator<char volatile*> > const&, bool, int, int) (CodeJitter.cpp:216)
+==418866==    by 0x12BC7A: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:292)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 2,056 bytes in 1 blocks are still reachable in loss record 28 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x126E99: __gnu_cxx::new_allocator<std::__detail::_Hash_node_base*>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x12629C: std::allocator_traits<std::allocator<std::__detail::_Hash_node_base*> >::allocate(std::allocator<std::__detail::_Hash_node_base*>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x1AC70C: std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<char volatile*, false> > >::_M_allocate_buckets(unsigned long) (hashtable_policy.h:1927)
+==418866==    by 0x1AA70C: std::_Hashtable<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_allocate_buckets(unsigned long) (hashtable.h:440)
+==418866==    by 0x1AEA56: std::_Hashtable<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_rehash_aux(unsigned long, std::integral_constant<bool, true>) (hashtable.h:2382)
+==418866==    by 0x1AD491: std::_Hashtable<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_rehash(unsigned long, unsigned long const&) (hashtable.h:2361)
+==418866==    by 0x1AB821: std::_Hashtable<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<char volatile*, false>*, unsigned long) (hashtable.h:2021)
+==418866==    by 0x1A9FB4: std::pair<std::__detail::_Node_iterator<char volatile*, true, false>, bool> std::_Hashtable<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert<char volatile*, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<char volatile*, false> > > >(char volatile*&&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<char volatile*, false> > > const&, std::integral_constant<bool, true>) (hashtable.h:2110)
+==418866==    by 0x1A7FB1: std::__detail::_Insert<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true>, true>::insert(char volatile*&&) (hashtable_policy.h:986)
+==418866==    by 0x1A65CD: std::unordered_set<char volatile*, std::hash<char volatile*>, std::equal_to<char volatile*>, std::allocator<char volatile*> >::insert(char volatile*&&) (unordered_set.h:426)
+==418866==    by 0x1A2BCB: PatternAddressMapper::determine_victims(std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > const&) (PatternAddressMapper.cpp:171)
+==418866== 
+==418866== 2,856 bytes in 51 blocks are still reachable in loss record 29 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x17437F: __gnu_cxx::new_allocator<std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false> >::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x171134: std::allocator_traits<std::allocator<std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false> > >::allocate(std::allocator<std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false> >&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x1AD0A5: std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false>* std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false> > >::_M_allocate_node<std::pair<int, DRAMAddr> >(std::pair<int, DRAMAddr>&&) (hashtable_policy.h:1873)
+==418866==    by 0x1AB3EE: std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_Scoped_node::_Scoped_node<std::pair<int, DRAMAddr> >(std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<std::pair<int const, DRAMAddr>, false> > >*, std::pair<int, DRAMAddr>&&) (hashtable.h:304)
+==418866==    by 0x1A9C55: std::pair<std::__detail::_Node_iterator<std::pair<int const, DRAMAddr>, false, false>, bool> std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_emplace<std::pair<int, DRAMAddr> >(std::integral_constant<bool, true>, std::pair<int, DRAMAddr>&&) (hashtable.h:1966)
+==418866==    by 0x1A7E67: std::pair<std::__detail::_Node_iterator<std::pair<int const, DRAMAddr>, false, false>, bool> std::_Hashtable<int, std::pair<int const, DRAMAddr>, std::allocator<std::pair<int const, DRAMAddr> >, std::__detail::_Select1st, std::equal_to<int>, std::hash<int>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::emplace<std::pair<int, DRAMAddr> >(std::pair<int, DRAMAddr>&&) (hashtable.h:915)
+==418866==    by 0x1A648B: std::enable_if<std::is_constructible<std::pair<int const, DRAMAddr>, std::pair<int, DRAMAddr>&&>::value, std::pair<std::__detail::_Node_iterator<std::pair<int const, DRAMAddr>, false, false>, bool> >::type std::unordered_map<int, DRAMAddr, std::hash<int>, std::equal_to<int>, std::allocator<std::pair<int const, DRAMAddr> > >::insert<std::pair<int, DRAMAddr> >(std::pair<int, DRAMAddr>&&) (unordered_map.h:564)
+==418866==    by 0x1A248A: PatternAddressMapper::randomize_addresses(FuzzingParameterSet&, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > const&, bool) (PatternAddressMapper.cpp:129)
+==418866==    by 0x12BAB0: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:280)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 3,072 bytes in 1 blocks are still reachable in loss record 30 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x143434: __gnu_cxx::new_allocator<AggressorAccessPattern>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F6DB: std::allocator_traits<std::allocator<AggressorAccessPattern> >::allocate(std::allocator<AggressorAccessPattern>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A79D: std::_Vector_base<AggressorAccessPattern, std::allocator<AggressorAccessPattern> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x1B662C: void std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> >::_M_realloc_insert<int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&>(__gnu_cxx::__normal_iterator<AggressorAccessPattern*, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > >, int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&) (vector.tcc:440)
+==418866==    by 0x1B5CA1: AggressorAccessPattern& std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> >::emplace_back<int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&>(int&, int&, std::vector<Aggressor, std::allocator<Aggressor> >&, int&) (vector.tcc:121)
+==418866==    by 0x1B508D: PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet&, int, int) (PatternBuilder.cpp:203)
+==418866==    by 0x1B52B8: PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet&) (PatternBuilder.cpp:214)
+==418866==    by 0x1294E6: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:55)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 3,232 bytes in 202 blocks are still reachable in loss record 31 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1AF753: __gnu_cxx::new_allocator<std::__detail::_Hash_node<char volatile*, false> >::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x1AE4B2: std::allocator_traits<std::allocator<std::__detail::_Hash_node<char volatile*, false> > >::allocate(std::allocator<std::__detail::_Hash_node<char volatile*, false> >&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x1AD3EF: std::__detail::_Hash_node<char volatile*, false>* std::__detail::_Hashtable_alloc<std::allocator<std::__detail::_Hash_node<char volatile*, false> > >::_M_allocate_node<char volatile*>(char volatile*&&) (hashtable_policy.h:1873)
+==418866==    by 0x1AB718: std::__detail::_Hash_node<char volatile*, false>* std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<char volatile*, false> > >::operator()<char volatile*>(char volatile*&&) const (hashtable_policy.h:168)
+==418866==    by 0x1A9F7A: std::pair<std::__detail::_Node_iterator<char volatile*, true, false>, bool> std::_Hashtable<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true> >::_M_insert<char volatile*, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<char volatile*, false> > > >(char volatile*&&, std::__detail::_AllocNode<std::allocator<std::__detail::_Hash_node<char volatile*, false> > > const&, std::integral_constant<bool, true>) (hashtable.h:2108)
+==418866==    by 0x1A7FB1: std::__detail::_Insert<char volatile*, char volatile*, std::allocator<char volatile*>, std::__detail::_Identity, std::equal_to<char volatile*>, std::hash<char volatile*>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, true, true>, true>::insert(char volatile*&&) (hashtable_policy.h:986)
+==418866==    by 0x1A65CD: std::unordered_set<char volatile*, std::hash<char volatile*>, std::equal_to<char volatile*>, std::allocator<char volatile*> >::insert(char volatile*&&) (unordered_set.h:426)
+==418866==    by 0x1A2BCB: PatternAddressMapper::determine_victims(std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > const&) (PatternAddressMapper.cpp:171)
+==418866==    by 0x1A2500: PatternAddressMapper::randomize_addresses(FuzzingParameterSet&, std::vector<AggressorAccessPattern, std::allocator<AggressorAccessPattern> > const&, bool) (PatternAddressMapper.cpp:134)
+==418866==    by 0x12BAB0: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:280)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866== 
+==418866== 8,192 bytes in 1 blocks are still reachable in loss record 32 of 38
+==418866==    at 0x484A2F3: operator new[](unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x49E4023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x49E8015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x49E8126: std::basic_ofstream<char, std::char_traits<char> >::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x1C6F08: Logger::initialize() (Logger.cpp:17)
+==418866==    by 0x111623: main (Blacksmith.cpp:61)
+==418866== 
+==418866== 8,192 bytes in 1 blocks are still reachable in loss record 33 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1813DF: __gnu_cxx::new_allocator<char volatile*>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x180F69: std::allocator_traits<std::allocator<char volatile*> >::allocate(std::allocator<char volatile*>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x180B91: std::_Vector_base<char volatile*, std::allocator<char volatile*> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x18027C: void std::vector<char volatile*, std::allocator<char volatile*> >::_M_realloc_insert<char volatile*>(__gnu_cxx::__normal_iterator<char volatile**, std::vector<char volatile*, std::allocator<char volatile*> > >, char volatile*&&) (vector.tcc:440)
+==418866==    by 0x17FA49: char volatile*& std::vector<char volatile*, std::allocator<char volatile*> >::emplace_back<char volatile*>(char volatile*&&) (vector.tcc:121)
+==418866==    by 0x17ECC1: std::vector<char volatile*, std::allocator<char volatile*> >::push_back(char volatile*&&) (stl_vector.h:1204)
+==418866==    by 0x1A4668: PatternAddressMapper::get_random_nonaccessed_rows(int) (PatternAddressMapper.cpp:314)
+==418866==    by 0x12BDFB: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:316)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 64,000 bytes in 1 blocks are still reachable in loss record 34 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x14327F: __gnu_cxx::new_allocator<Aggressor>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x13F532: std::allocator_traits<std::allocator<Aggressor> >::allocate(std::allocator<Aggressor>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x13A54D: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x138F1C: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_M_create_storage(unsigned long) (stl_vector.h:361)
+==418866==    by 0x134126: std::_Vector_base<Aggressor, std::allocator<Aggressor> >::_Vector_base(unsigned long, std::allocator<Aggressor> const&) (stl_vector.h:305)
+==418866==    by 0x1B597A: std::vector<Aggressor, std::allocator<Aggressor> >::vector(unsigned long, Aggressor const&, std::allocator<Aggressor> const&) (stl_vector.h:524)
+==418866==    by 0x1B4B33: PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet&, int, int) (PatternBuilder.cpp:129)
+==418866==    by 0x1B52B8: PatternBuilder::generate_frequency_based_pattern(FuzzingParameterSet&) (PatternBuilder.cpp:214)
+==418866==    by 0x1294E6: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:55)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 72,704 bytes in 1 blocks are still reachable in loss record 35 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x4979939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==418866==    by 0x400647D: call_init.part.0 (dl-init.c:70)
+==418866==    by 0x4006567: call_init (dl-init.c:33)
+==418866==    by 0x4006567: _dl_init (dl-init.c:117)
+==418866==    by 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+==418866==    by 0xA: ???
+==418866==    by 0x1FFF000CAE: ???
+==418866==    by 0x1FFF000CBB: ???
+==418866==    by 0x1FFF000CC5: ???
+==418866==    by 0x1FFF000CC7: ???
+==418866==    by 0x1FFF000CCF: ???
+==418866==    by 0x1FFF000CD1: ???
+==418866== 
+==418866== 131,072 bytes in 1 blocks are still reachable in loss record 36 of 38
+==418866==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1813DF: __gnu_cxx::new_allocator<char volatile*>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==418866==    by 0x180F69: std::allocator_traits<std::allocator<char volatile*> >::allocate(std::allocator<char volatile*>&, unsigned long) (alloc_traits.h:464)
+==418866==    by 0x180B91: std::_Vector_base<char volatile*, std::allocator<char volatile*> >::_M_allocate(unsigned long) (stl_vector.h:346)
+==418866==    by 0x18027C: void std::vector<char volatile*, std::allocator<char volatile*> >::_M_realloc_insert<char volatile*>(__gnu_cxx::__normal_iterator<char volatile**, std::vector<char volatile*, std::allocator<char volatile*> > >, char volatile*&&) (vector.tcc:440)
+==418866==    by 0x17FA49: char volatile*& std::vector<char volatile*, std::allocator<char volatile*> >::emplace_back<char volatile*>(char volatile*&&) (vector.tcc:121)
+==418866==    by 0x17ECC1: std::vector<char volatile*, std::allocator<char volatile*> >::push_back(char volatile*&&) (stl_vector.h:1204)
+==418866==    by 0x1A2EE6: PatternAddressMapper::export_pattern_internal(std::vector<Aggressor, std::allocator<Aggressor> >&, int, std::vector<char volatile*, std::allocator<char volatile*> >&, std::vector<int, std::allocator<int> >&) (PatternAddressMapper.cpp:205)
+==418866==    by 0x1A3184: PatternAddressMapper::export_pattern(std::vector<Aggressor, std::allocator<Aggressor> >&, int, std::vector<char volatile*, std::allocator<char volatile*> >&) (PatternAddressMapper.cpp:225)
+==418866==    by 0x12BAE2: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:284)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 16,777,216 bytes in 1 blocks are still reachable in loss record 37 of 38
+==418866==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x487D34D: asmjit::String::prepare(unsigned int, unsigned long) (string.cpp:128)
+==418866==    by 0x487D63A: asmjit::String::_opString(unsigned int, char const*, unsigned long) (string.cpp:224)
+==418866==    by 0x4870D53: log (logger.h:112)
+==418866==    by 0x4870D53: asmjit::EmitterUtils::logInstructionEmitted(asmjit::BaseAssembler*, unsigned int, unsigned int, asmjit::Operand_ const&, asmjit::Operand_ const&, asmjit::Operand_ const&, asmjit::Operand_ const*, unsigned int, unsigned int, unsigned char*) (emitterutils.cpp:118)
+==418866==    by 0x4883CFB: asmjit::x86::Assembler::_emit(unsigned int, asmjit::Operand_ const&, asmjit::Operand_ const&, asmjit::Operand_ const&, asmjit::Operand_ const*) (x86assembler.cpp:4980)
+==418866==    by 0x1907D2: asmjit::x86::EmitterExplicitT<asmjit::x86::Assembler>::mov(asmjit::x86::Gp const&, asmjit::x86::Mem const&) (x86emitter.h:563)
+==418866==    by 0x18E60C: CodeJitter::jit_strict(int, FLUSHING_STRATEGY, FENCING_STRATEGY, std::vector<char volatile*, std::allocator<char volatile*> > const&, bool, int, int) (CodeJitter.cpp:116)
+==418866==    by 0x12BC7A: FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper&, Memory&, FuzzingParameterSet&, unsigned long) (FuzzyHammerer.cpp:292)
+==418866==    by 0x1296A7: FuzzyHammerer::n_sided_frequency_based_hammering(Memory&, int, unsigned long, unsigned long, bool) (FuzzyHammerer.cpp:74)
+==418866==    by 0x1118D8: main (Blacksmith.cpp:106)
+==418866== 
+==418866== 67,108,864 bytes in 1 blocks are still reachable in loss record 38 of 38
+==418866==    at 0x484DE30: memalign (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x484DF92: posix_memalign (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==418866==    by 0x1BD8AB: Memory::allocate_memory(unsigned long) (Memory.cpp:27)
+==418866==    by 0x11170F: main (Blacksmith.cpp:77)
+==418866== 
+==418866== LEAK SUMMARY:
+==418866==    definitely lost: 0 bytes in 0 blocks
+==418866==    indirectly lost: 0 bytes in 0 blocks
+==418866==      possibly lost: 0 bytes in 0 blocks
+==418866==    still reachable: 84,187,484 bytes in 317 blocks
+==418866==         suppressed: 0 bytes in 0 blocks
+==418866== 
+==418866== For lists of detected and suppressed errors, rerun with: -s
+==418866== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)

@@ -1,0 +1,226 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="namespaceargagg" kind="namespace" language="C++">
+    <compoundname>argagg</compoundname>
+    <innerclass refid="structargagg_1_1unexpected__argument__error" prot="public">argagg::unexpected_argument_error</innerclass>
+    <innerclass refid="structargagg_1_1unexpected__option__error" prot="public">argagg::unexpected_option_error</innerclass>
+    <innerclass refid="structargagg_1_1option__lacks__argument__error" prot="public">argagg::option_lacks_argument_error</innerclass>
+    <innerclass refid="structargagg_1_1invalid__flag" prot="public">argagg::invalid_flag</innerclass>
+    <innerclass refid="structargagg_1_1unknown__option" prot="public">argagg::unknown_option</innerclass>
+    <innerclass refid="structargagg_1_1option__result" prot="public">argagg::option_result</innerclass>
+    <innerclass refid="structargagg_1_1option__results" prot="public">argagg::option_results</innerclass>
+    <innerclass refid="structargagg_1_1parser__results" prot="public">argagg::parser_results</innerclass>
+    <innerclass refid="structargagg_1_1definition" prot="public">argagg::definition</innerclass>
+    <innerclass refid="structargagg_1_1parser__map" prot="public">argagg::parser_map</innerclass>
+    <innerclass refid="structargagg_1_1parser" prot="public">argagg::parser</innerclass>
+    <innerclass refid="structargagg_1_1fmt__ostream" prot="public">argagg::fmt_ostream</innerclass>
+    <innerclass refid="structargagg_1_1csv" prot="public">argagg::csv</innerclass>
+    <innernamespace refid="namespaceargagg_1_1convert">argagg::convert</innernamespace>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="namespaceargagg_1acb5531e41fdc903b94502fc13736d94a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::cmd_line_arg_is_option_flag</definition>
+        <argsstring>(const char *s)</argsstring>
+        <name>cmd_line_arg_is_option_flag</name>
+        <param>
+          <type>const char *</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>Checks whether or not a command line argument should be processed as an option flag. This is very similar to <ref refid="namespaceargagg_1affa2ac4b0385ceafd6f97af921f7579e" kindref="member">is_valid_flag_definition()</ref> but must allow for short flag groups (e.g. &quot;-abc&quot;) and equal-assigned long flag arguments (e.g. &quot;--output=foo.txt&quot;). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="929" column="6" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="929" bodyend="1005" declfile="_deps/argagg-src/include/argagg/argagg.hpp" declline="539" declcolumn="6"/>
+        <references refid="cpp/algorithm/all_any_none_of_1">std::all_of</references>
+        <references refid="cpp/string/byte/isalnum_1">std::isalnum</references>
+        <references refid="cpp/string/byte/strlen_1">std::strlen</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1affa2ac4b0385ceafd6f97af921f7579e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::is_valid_flag_definition</definition>
+        <argsstring>(const char *s)</argsstring>
+        <name>is_valid_flag_definition</name>
+        <param>
+          <type>const char *</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>Checks whether a flag in an option definition is valid. I suggest reading through the function source to understand what dictates a valid. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1009" column="6" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1009" bodyend="1061" declfile="_deps/argagg-src/include/argagg/argagg.hpp" declline="548" declcolumn="6"/>
+        <references refid="cpp/algorithm/all_any_none_of_1">std::all_of</references>
+        <references refid="cpp/string/byte/isalnum_1">std::isalnum</references>
+        <references refid="cpp/string/byte/strlen_1">std::strlen</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1abcf4845730ad824564affe95051a5b98" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::flag_is_short</definition>
+        <argsstring>(const char *s)</argsstring>
+        <name>flag_is_short</name>
+        <param>
+          <type>const char *</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>Tests whether or not a valid flag is short. Assumes the provided cstring is already a valid flag. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1065" column="6" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1065" bodyend="1069" declfile="_deps/argagg-src/include/argagg/argagg.hpp" declline="557" declcolumn="6"/>
+        <references refid="cpp/string/byte/isalnum_1">std::isalnum</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1a7a7eacb2cf495cc33c08df68619fbf95" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structargagg_1_1parser__map" kindref="compound">parser_map</ref></type>
+        <definition>parser_map argagg::validate_definitions</definition>
+        <argsstring>(const std::vector&lt; definition &gt; &amp;definitions)</argsstring>
+        <name>validate_definitions</name>
+        <param>
+          <type>const <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>&lt; <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> &gt; &amp;</type>
+          <declname>definitions</declname>
+        </param>
+        <briefdescription>
+<para>Validates a collection (specifically an <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>) of <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> objects by checking if the contained flags are valid. If the set of <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> objects is not valid then an exception is thrown. Upon successful validation a <ref refid="structargagg_1_1parser__map" kindref="compound">parser_map</ref> object is returned. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1110" column="12" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1110" bodyend="1162" declfile="_deps/argagg-src/include/argagg/argagg.hpp" declline="628" declcolumn="12"/>
+        <references refid="namespaceargagg_1abcf4845730ad824564affe95051a5b98" compoundref="argagg_8hpp" startline="1065" endline="1069">flag_is_short</references>
+        <references refid="namespaceargagg_1affa2ac4b0385ceafd6f97af921f7579e" compoundref="argagg_8hpp" startline="1009" endline="1061">is_valid_flag_definition</references>
+        <references refid="cpp/utility/pair/make_pair_1">std::make_pair</references>
+        <references refid="cpp/utility/move_1">std::move</references>
+        <references refid="cpp/io/basic_ostringstream/str_1">std::ostringstream::str</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1ae9d8a0de66b416e737bddcb36a9eddf0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref></type>
+        <definition>std::string argagg::fmt_string</definition>
+        <argsstring>(const std::string &amp;s)</argsstring>
+        <name>fmt_string</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+<para>Processes the provided string using the fmt utility and returns the resulting output as a string. Not the most efficient (in time or space) but gets the job done. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1669" column="13" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1669" bodyend="1684" declfile="_deps/argagg-src/include/argagg/argagg.hpp" declline="716" declcolumn="13"/>
+        <references refid="cpp/string/basic_string/getline_1">std::getline</references>
+        <references refid="namespaceargagg_1af3952e65af14a27e38b23a182e5f73e9" compoundref="argagg_8hpp" startline="1633" endline="1665">wrap_line</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1ad6e47329f6a56f6e45506858c12934af" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref></type>
+        <definition>std::string argagg::lstrip</definition>
+        <argsstring>(const std::string &amp;text)</argsstring>
+        <name>lstrip</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>text</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1589" column="13" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1589" bodyend="1601"/>
+        <references refid="cpp/string/basic_string/erase_1">std::string::erase</references>
+        <references refid="cpp/algorithm/find_1">std::find_if</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1a885d9c37c366b02bda073ab905318c4a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref></type>
+        <definition>std::string argagg::rstrip</definition>
+        <argsstring>(const std::string &amp;text)</argsstring>
+        <name>rstrip</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>text</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1605" column="13" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1605" bodyend="1617"/>
+        <references refid="cpp/string/basic_string/erase_1">std::string::erase</references>
+        <references refid="cpp/algorithm/find_1">std::find_if</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1acbc83fd3fd06fbac5b484ee6c1c82a38" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref></type>
+        <definition>std::string argagg::construct_line</definition>
+        <argsstring>(const std::string &amp;indent, const std::string &amp;contents)</argsstring>
+        <name>construct_line</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>indent</declname>
+        </param>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>contents</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1621" column="13" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1621" bodyend="1625"/>
+        <references refid="namespaceargagg_1a885d9c37c366b02bda073ab905318c4a" compoundref="argagg_8hpp" startline="1605" endline="1617">rstrip</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1af3952e65af14a27e38b23a182e5f73e9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref></type>
+        <definition>std::string argagg::wrap_line</definition>
+        <argsstring>(const std::string &amp;single_line, const std::size_t wrap_width)</argsstring>
+        <name>wrap_line</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>single_line</declname>
+        </param>
+        <param>
+          <type>const <ref refid="cpp/types/size_t" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::size_t</ref></type>
+          <declname>wrap_width</declname>
+        </param>
+        <briefdescription>
+<para>Return a wrapped version of a single line of text. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1633" column="13" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1633" bodyend="1665"/>
+        <references refid="namespaceargagg_1acbc83fd3fd06fbac5b484ee6c1c82a38" compoundref="argagg_8hpp" startline="1621" endline="1625">construct_line</references>
+        <references refid="cpp/string/basic_string/find_first_not_of_1">std::string::find_first_not_of</references>
+        <references refid="namespaceargagg_1ad6e47329f6a56f6e45506858c12934af" compoundref="argagg_8hpp" startline="1589" endline="1601">lstrip</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>There are only two hard things in Computer Science: cache invalidation and naming things (Phil Karlton). </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The names of types have to be succinct and clear. This has turned out to be a more difficult thing than I expected. Here you&apos;ll find a quick overview of the type names you&apos;ll find in this namespace (and thus &quot;library&quot;).</para>
+<para>When a program is invoked it is passed a number of &quot;command line arguments&quot;. Each of these &quot;arguments&quot; is a string (C-string to be more precise). An &quot;option&quot; is a command line argument that has special meaning. This library recognizes a command line argument as a potential option if it starts with a dash (&apos;-&apos;) or double-dash (&apos;<ndash/>&apos;).</para>
+<para>A &quot;parser&quot; is a set of &quot;definitions&quot; (not a literal <ref refid="cpp/container/set" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::set</ref> but rather a <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>). A parser is represented by the <ref refid="structargagg_1_1parser" kindref="compound">argagg::parser</ref> struct.</para>
+<para>A &quot;definition&quot; is a structure with four components that define what &quot;options&quot; are recognized. The four components are the name of the option, the strings that represent the option, the option&apos;s help text, and how many arguments the option should expect. &quot;Flags&quot; are the individual strings that represent the option (&quot;-v&quot; and &quot;--verbose&quot; are flags for the &quot;verbose&quot; option). A definition is represented by the <ref refid="structargagg_1_1definition" kindref="compound">argagg::definition</ref> struct.</para>
+<para>Note at this point that the word &quot;option&quot; can be used interchangeably to mean the notion of an option and the actual instance of an option given a set of command line arguments. To be unambiguous we use a &quot;definition&quot; to represent the notion of an option and an &quot;option result&quot; to represent an actual option parsed from a set of command line arguments. An &quot;option
+result&quot; is represented by the <ref refid="structargagg_1_1option__result" kindref="compound">argagg::option_result</ref> struct.</para>
+<para>There&apos;s one more wrinkle to this: an option can show up multiple times in a given set of command line arguments. For example, &quot;-n 1 -n 2 -n 3&quot;. This will parse into three distinct <ref refid="structargagg_1_1option__result" kindref="compound">argagg::option_result</ref> instances, but all of them correspond to the same <ref refid="structargagg_1_1definition" kindref="compound">argagg::definition</ref>. We aggregate these into the <ref refid="structargagg_1_1option__results" kindref="compound">argagg::option_results</ref> struct which represents &quot;all parser results for a
+given option definition&quot;. This <ref refid="structargagg_1_1option__results" kindref="compound">argagg::option_results</ref> is basically a <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref> of <ref refid="structargagg_1_1option__result" kindref="compound">argagg::option_result</ref>.</para>
+<para>Options aren&apos;t the only thing parsed though. Positional arguments are also parsed. Thus a parser produces a result that contains both option results and positional arguments. The parser results are represented by the <ref refid="structargagg_1_1parser__results" kindref="compound">argagg::parser_results</ref> struct. All option results are stored in a mapping from option name to the <ref refid="structargagg_1_1option__results" kindref="compound">argagg::option_results</ref>. All positional arguments are simply stored in a vector of C-strings. </para>
+    </detaileddescription>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="96" column="1"/>
+  </compounddef>
+</doxygen>

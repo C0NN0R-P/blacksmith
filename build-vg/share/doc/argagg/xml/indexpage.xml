@@ -1,0 +1,132 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="indexpage" kind="page">
+    <compoundname>index</compoundname>
+    <title>Argument Aggregator</title>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><anchor id="index_1mainpage"/></para>
+<para>This is the Doxygen documentation for Argument Aggregator, a simple C++11 argument parser.</para>
+<para>To use just create an <ref refid="structargagg_1_1parser" kindref="compound">argagg::parser</ref> object. However, the struct doesn&apos;t provide any explicit methods for defining flags. Instead we define the flags using initialization lists. <verbatim>argagg::parser argparser {{
+    { &quot;help&quot;, {&quot;-h&quot;, &quot;--help&quot;},
+      &quot;shows this help message&quot;, 0},
+    { &quot;delim&quot;, {&quot;-d&quot;, &quot;--delim&quot;},
+      &quot;delimiter (default: ,)&quot;, 1},
+    { &quot;num&quot;, {&quot;-n&quot;, &quot;--num&quot;},
+      &quot;number&quot;, 1},
+  }};
+</verbatim> An option is specified by four things: the name of the option, the strings that activate the option (flags), the option&apos;s help message, and the number of arguments the option expects.</para>
+<para>With the parser defined you actually parse the arguments by calling the <ref refid="structargagg_1_1parser_1a4f85341056c6f30e02c58b0c9b33dedb" kindref="member">argagg::parser::parse()</ref> method. If there are any problems then an exception is thrown. <verbatim>argagg::parser_results args;
+try {
+  args = argparser.parse(argc, argv);
+} catch (const std::exception&amp; e) {
+  std::cerr &lt;&lt; e.what() &lt;&lt; &apos;\n&apos;;
+  return EXIT_FAILURE;
+}
+</verbatim> You can check if an option shows up in the command line arguments by accessing the option by name from the parser results and using the implicit boolean conversion. You can write out a simplistic option help message by streaming the <ref refid="structargagg_1_1parser" kindref="compound">argagg::parser</ref> instance itself. <verbatim>if (args[&quot;help&quot;]) {
+  std::cerr &lt;&lt; argparser;
+  //     -h, --help
+  //         shows this help message
+  //     -d, --delim
+  //         delimiter (default: ,)
+  //     -n, --num
+  //         number
+  return EXIT_SUCCESS;
+}
+</verbatim> That help message is only for the flags. If you want a usage message it&apos;s up to you to provide it. <verbatim>if (args[&quot;help&quot;]) {
+  std::cerr &lt;&lt; &quot;Usage: program [options] ARG1 ARG2\n&quot; &lt;&lt; argparser;
+  // Usage: program [options] ARG1 ARG2
+  //     -h, --help
+  //         shows this help message
+  //     -d, --delim
+  //         delimiter (default: ,)
+  //     -n, --num
+  //         number
+  return EXIT_SUCCESS;
+}
+</verbatim> A special output stream, <ref refid="structargagg_1_1fmt__ostream" kindref="compound">argagg::fmt_ostream</ref>, is provided that will run the usage and help through <computeroutput>fmt</computeroutput> for nice word wrapping (see <computeroutput>./examples/joinargs.cpp</computeroutput> for a better example). <verbatim>if (args[&quot;help&quot;]) {
+  argagg::fmt_ostream fmt(std::cerr);
+  fmt &lt;&lt; &quot;Usage: program [options] ARG1 ARG2\n&quot; &lt;&lt; argparser;
+  return EXIT_SUCCESS;
+}
+</verbatim> Generally argagg tries to do a minimal amount of work to leave most of the control with the user.</para>
+<para>If you want to get an option argument but fallback on a default value if it doesn&apos;t exist then you can use the <ref refid="structargagg_1_1option__results_1a9a51160f3a6d84e162e5ec909a2ed44a" kindref="member">argagg::option_results::as()</ref> API and provide a default value. <verbatim>auto delim = args[&quot;delim&quot;].as&lt;std::string&gt;(&quot;,&quot;);
+</verbatim> If you don&apos;t mind being implicit an implicit conversion operator is provided allowing you to write simple assignments. <verbatim>int x = 0;
+if (args[&quot;num&quot;]) {
+  x = args[&quot;num&quot;];
+}
+</verbatim> Finally, you can get all of the positional arguments as an <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref> using the <ref refid="structargagg_1_1parser__results_1a159b7d39369d6a3bc76bb484a109d6cc" kindref="member">argagg::parser_results::pos</ref> member. You can alternatively convert individual positional arguments using the same conversion functions as the option argument conversion methods. <verbatim>auto y = 0.0;
+if (args.pos.size() &gt; 0) {
+  y = args.as&lt;double&gt;(0);
+}
+</verbatim> One can also specify <computeroutput>--</computeroutput> on the command line in order to treat all following arguments as not options.</para>
+<para>For a more detailed treatment take a look at the examples or test cases.</para>
+<para>Custom argument conversion functions can also be defined by specializing either <ref refid="namespaceargagg_1_1convert_1acbfa15a31486143d3c2032b4ac78fa96" kindref="member">argagg::convert::arg&lt;T&gt;()</ref> or argagg::convert::converter&lt;T&gt;. See test_csv.cpp as well as <computeroutput>TEST_CASE(&quot;custom conversion function&quot;)</computeroutput> and <computeroutput>TEST_CASE(&quot;parse_next_component() example&quot;)</computeroutput> in test.cpp.</para>
+<sect1 id="index_1autotoc_md0">
+<title>Mental Model</title>
+<para>The parser just returns a structure of pointers to the C-strings in the original <computeroutput>argv</computeroutput> array. The <ref refid="structargagg_1_1parser_1a4f85341056c6f30e02c58b0c9b33dedb" kindref="member">argagg::parser::parse()</ref> method returns a <ref refid="structargagg_1_1parser__results" kindref="compound">argagg::parser_results</ref> object which has two things: position arguments and option results. The position arguments are just a <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref> of <computeroutput>const char*</computeroutput>. The option results are a mapping from option name (<ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref>) to <ref refid="structargagg_1_1option__results" kindref="compound">argagg::option_results</ref> objects. The <ref refid="structargagg_1_1option__results" kindref="compound">argagg::option_results</ref> objects are just an <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref> of <ref refid="structargagg_1_1option__result" kindref="compound">argagg::option_result</ref> objects. Each instance of an <ref refid="structargagg_1_1option__result" kindref="compound">argagg::option_result</ref> represents the option showing up on the command line. If there was an argument associated with it then the <ref refid="structargagg_1_1option__result_1a10cf3c02b1c5e5d57f6b9f41b622da46" kindref="member">argagg::option_result::arg</ref> member will <emphasis>not</emphasis> be <computeroutput>nullptr</computeroutput>.</para>
+<para>Consider the following command: <verbatim>gcc -g -I/usr/local/include -I. -o test main.o foo.o -L/usr/local/lib -lz bar.o -lpng
+</verbatim> This would produce a structure like follows, written in psuedo-YAML, where each string is actually a <computeroutput>const char*</computeroutput> pointing to some part of a string in the original <computeroutput>argv</computeroutput> array: <verbatim>parser_results:
+  program: &quot;gcc&quot;
+  pos: [&quot;main.o&quot;, &quot;foo.o&quot;, &quot;bar.o&quot;]
+  options:
+    version:
+    debug:
+      all:
+      - arg: null
+    include_path:
+      all:
+      - arg: &quot;/usr/local/include&quot;
+      - arg: &quot;.&quot;
+    library_path:
+      all:
+      - arg: &quot;/usr/local/lib&quot;
+    library:
+      all:
+      - arg: &quot;z&quot;
+      - arg: &quot;png&quot;
+    output:
+      all:
+      - arg: &quot;test&quot;
+</verbatim> Conversion to types occurs at the very end when the <computeroutput>as&lt;T&gt;()</computeroutput> API is used. Up to that point <computeroutput>argagg</computeroutput> is just dealing with C-strings.</para>
+</sect1>
+<sect1 id="index_1autotoc_md1">
+<title>Installation</title>
+<para>There is just a single required header file (<computeroutput><ref refid="argagg_8hpp" kindref="compound">argagg.hpp</ref></computeroutput>) so you can copy that whereever you want. If you want to properly install it you can use the CMake script. The CMake script exists primarily to build the tests and documentation, but an install target for the header is provided which will install all header files.</para>
+<para>The standard installation dance using CMake and <computeroutput>make</computeroutput> is as follows: <verbatim>mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
+make install
+ctest -V # optionally run tests
+</verbatim> Override <ulink url="https://cmake.org/cmake/help/v2.8.12/cmake.html#variable:CMAKE_INSTALL_PREFIX"><computeroutput>CMAKE_INSTALL_PREFIX</computeroutput></ulink> to change the installation location. By default (on UNIX variants) it will install to <computeroutput>/usr/local</computeroutput> resulting in the header being copied to <computeroutput>/usr/local/include/argagg/argagg.hpp</computeroutput>.</para>
+<para>If you have <ulink url="http://www.stack.nl/~dimitri/doxygen/">Doxygen</ulink> it should build and install documentation as well.</para>
+<para>There are no dependencies other than the standard library.</para>
+</sect1>
+<sect1 id="index_1autotoc_md2">
+<title>Edge Cases</title>
+<para>There are some interesting edge cases that show up in option parsing. I used the behavior of <computeroutput>gcc</computeroutput> as my target reference in these cases.</para>
+<sect2 id="index_1autotoc_md3">
+<title>Greedy Arguments</title>
+<para>Remember that options that require arguments will greedily process arguments.</para>
+<para>Say we have the following options: <computeroutput>-a</computeroutput>, <computeroutput>-b</computeroutput>, <computeroutput>-c</computeroutput>, and <computeroutput>-o</computeroutput>. They all don&apos;t accept arguments except <computeroutput>-o</computeroutput>. Below is a list of permutations for short flag grouping and the results:</para>
+<para><itemizedlist>
+<listitem><para><computeroutput>-abco foo</computeroutput>: <computeroutput>-o</computeroutput>&apos;s argument is <computeroutput>foo</computeroutput></para>
+</listitem><listitem><para><computeroutput>-aboc foo</computeroutput>: <computeroutput>-o</computeroutput>&apos;s argument is <computeroutput>c</computeroutput>, <computeroutput>foo</computeroutput> is a positional argument</para>
+</listitem><listitem><para><computeroutput>-aobc foo</computeroutput>: <computeroutput>-o</computeroutput>&apos;s argument is <computeroutput>bc</computeroutput>, <computeroutput>foo</computeroutput> is a positional argument</para>
+</listitem><listitem><para><computeroutput>-oabc foo</computeroutput>: <computeroutput>-o</computeroutput>&apos;s argument is <computeroutput>abc</computeroutput>, <computeroutput>foo</computeroutput> is a positional argument</para>
+</listitem></itemizedlist>
+</para>
+<para>For whitespace delimited arguments the greedy processing means the next argument element (in <computeroutput>argv</computeroutput>) will be treated as an argument for the previous option, regardless of whether or not it looks like a flag or some other special entry. That means you get behavior like below:</para>
+<para><itemizedlist>
+<listitem><para><computeroutput>--output=foo -- --bar</computeroutput>: <computeroutput>--output</computeroutput>&apos;s argument is <computeroutput>foo</computeroutput>, <computeroutput>--bar</computeroutput> is a positional argument</para>
+</listitem><listitem><para><computeroutput>--output -- --bar</computeroutput>: <computeroutput>--output</computeroutput>&apos;s argument is <computeroutput>--</computeroutput>, <computeroutput>--bar</computeroutput> is treated as a flag</para>
+</listitem><listitem><para><computeroutput>--output --bar</computeroutput>: <computeroutput>--output</computeroutput>&apos;s argument is <computeroutput>--bar</computeroutput> </para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+</sect1>
+    </detaileddescription>
+    <location file="_deps/argagg-src/doc/root.md"/>
+  </compounddef>
+</doxygen>

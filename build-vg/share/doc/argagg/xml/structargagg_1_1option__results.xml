@@ -1,0 +1,197 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1option__results" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::option_results</compoundname>
+    <includes refid="argagg_8hpp" local="no">argagg.hpp</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structargagg_1_1option__results_1a5371fd527139e2a0c9036c8230f4dc9c" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>&lt; <ref refid="structargagg_1_1option__result" kindref="compound">option_result</ref> &gt;</type>
+        <definition>std::vector&lt;option_result&gt; argagg::option_results::all</definition>
+        <argsstring></argsstring>
+        <name>all</name>
+        <briefdescription>
+<para>All option parse results for this option. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="338" column="15" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="338" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structargagg_1_1option__results_1a1a8097d49a40ed772b64e99abbf188a6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="cpp/types/size_t" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::size_t</ref></type>
+        <definition>std::size_t argagg::option_results::count</definition>
+        <argsstring>() const</argsstring>
+        <name>count</name>
+        <briefdescription>
+<para>Gets the number of times the option shows up. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="344" column="15" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="788" bodyend="791"/>
+        <references refid="structargagg_1_1option__results_1a5371fd527139e2a0c9036c8230f4dc9c" compoundref="argagg_8hpp" startline="338">all</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__results_1a3baaa4525cbc4c39aaf4841c93059336" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structargagg_1_1option__result" kindref="compound">option_result</ref> &amp;</type>
+        <definition>option_result &amp; argagg::option_results::operator[]</definition>
+        <argsstring>(std::size_t index)</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type><ref refid="cpp/types/size_t" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::size_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+<para>Gets a single option parse result by index. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="350" column="17" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="795" bodyend="798"/>
+        <references refid="structargagg_1_1option__results_1a5371fd527139e2a0c9036c8230f4dc9c" compoundref="argagg_8hpp" startline="338">all</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__results_1ad36f1ddd9a96619bb6d9ac816a7a8e18" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const <ref refid="structargagg_1_1option__result" kindref="compound">option_result</ref> &amp;</type>
+        <definition>const option_result &amp; argagg::option_results::operator[]</definition>
+        <argsstring>(std::size_t index) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type><ref refid="cpp/types/size_t" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::size_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+<para>Gets a single option result by index. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="356" column="23" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="802" bodyend="805"/>
+        <references refid="structargagg_1_1option__results_1a5371fd527139e2a0c9036c8230f4dc9c" compoundref="argagg_8hpp" startline="338">all</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__results_1a9a51160f3a6d84e162e5ec909a2ed44a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::option_results::as</definition>
+        <argsstring>() const</argsstring>
+        <name>as</name>
+        <briefdescription>
+<para>Converts the argument parsed for the LAST option parse result for the parent definition to the provided type. For example, if this was for &quot;-f 1
+-f 2 -f 3&quot; then calling this method for an integer type will return 3. If there are no option parse results then a <ref refid="cpp/error/out_of_range" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::out_of_range</ref> exception is thrown. Any exceptions thrown by <ref refid="structargagg_1_1option__result_1acad0ebe8b52f37b25c6955b406ff809f" kindref="member">option_result::as()</ref> are not handled. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="368" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="809" bodyend="815"/>
+        <references refid="structargagg_1_1option__results_1a5371fd527139e2a0c9036c8230f4dc9c" compoundref="argagg_8hpp" startline="338">all</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__results_1a6349a76db68c9f3aa26c272b10294dbc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::option_results::as</definition>
+        <argsstring>(const T &amp;t) const</argsstring>
+        <name>as</name>
+        <param>
+          <type>const T &amp;</type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+<para>Converts the argument parsed for the LAST option parse result for the parent definition to the provided type. For example, if this was for &quot;-f 1
+-f 2 -f 3&quot; then calling this method for an integer type will return 3. If there are no option parse results then the provided default value is returned instead. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="379" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="819" bodyend="825"/>
+        <references refid="structargagg_1_1option__results_1a5371fd527139e2a0c9036c8230f4dc9c" compoundref="argagg_8hpp" startline="338">all</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__results_1a2cc4fa25461d7e8811b7f3c589062f84" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>argagg::option_results::operator T</definition>
+        <argsstring>() const</argsstring>
+        <name>operator T</name>
+        <briefdescription>
+<para>Since we have the <ref refid="structargagg_1_1option__results_1a9a51160f3a6d84e162e5ec909a2ed44a" kindref="member">option_results::as()</ref> API we might as well alias it as an implicit conversion operator. This performs implicit conversion using the <ref refid="structargagg_1_1option__results_1a9a51160f3a6d84e162e5ec909a2ed44a" kindref="member">option_results::as()</ref> method. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>An implicit boolean conversion specialization exists which returns false if there is no argument for this single option instance and true otherwise. This specialization DOES NOT convert the argument to a bool. If you need to convert the argument to a bool then use the <ref refid="structargagg_1_1option__results_1a9a51160f3a6d84e162e5ec909a2ed44a" kindref="member">as()</ref> API. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="394" column="3" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="829" bodyend="832"/>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1option__results_1ae6ec9aa96c21218ce4c2aace633055de" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::option_results::operator!</definition>
+        <argsstring>() const</argsstring>
+        <name>operator!</name>
+        <briefdescription>
+<para>Explicitly define a unary not operator that wraps the implicit boolean conversion specialization in case the compiler can&apos;t do it automatically. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="401" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="843" bodyend="846"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Represents multiple option parse results for a single option. If treated as a single parse result it defaults to the last parse result. Note that an instance of this struct is always created even if no option results are parsed for a given definition. In that case it will simply be empty. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>To check if the associated option showed up at all simply use the implicit boolean conversion or check if <ref refid="structargagg_1_1option__results_1a1a8097d49a40ed772b64e99abbf188a6" kindref="member">count()</ref> is greater than zero. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>argagg::option_results</label>
+        <link refid="structargagg_1_1option__results"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>all</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::vector&lt; argagg::option_result &gt;</label>
+        <link refid="cpp/container/vector" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>argagg::option_result</label>
+        <link refid="structargagg_1_1option__result"/>
+      </node>
+    </collaborationgraph>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="332" column="1" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="332" bodyend="403"/>
+    <listofallmembers>
+      <member refid="structargagg_1_1option__results_1a5371fd527139e2a0c9036c8230f4dc9c" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>all</name></member>
+      <member refid="structargagg_1_1option__results_1a9a51160f3a6d84e162e5ec909a2ed44a" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>as</name></member>
+      <member refid="structargagg_1_1option__results_1a6349a76db68c9f3aa26c272b10294dbc" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>as</name></member>
+      <member refid="structargagg_1_1option__results_1a1a8097d49a40ed772b64e99abbf188a6" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>count</name></member>
+      <member refid="structargagg_1_1option__results_1a2cc4fa25461d7e8811b7f3c589062f84" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>operator T</name></member>
+      <member refid="structargagg_1_1option__results_1ae6ec9aa96c21218ce4c2aace633055de" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>operator!</name></member>
+      <member refid="structargagg_1_1option__results_1a3baaa4525cbc4c39aaf4841c93059336" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>operator[]</name></member>
+      <member refid="structargagg_1_1option__results_1ad36f1ddd9a96619bb6d9ac816a7a8e18" prot="public" virt="non-virtual"><scope>argagg::option_results</scope><name>operator[]</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

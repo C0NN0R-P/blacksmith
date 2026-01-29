@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1convert_1_1converter_3_01cv_1_1Size___3_01T_01_4_01_4" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::convert::converter&lt; cv::Size_&lt; T &gt; &gt;</compoundname>
+    <includes refid="opencv_8hpp" local="no">opencv.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename T</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="structargagg_1_1convert_1_1converter_3_01cv_1_1Size___3_01T_01_4_01_4_1a9d4a5d4c716f62f02b7ff7816db76807" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>cv::Size_&lt; T &gt;</type>
+        <definition>cv::Size_&lt; T &gt; argagg::convert::converter&lt; cv::Size_&lt; T &gt; &gt;::convert</definition>
+        <argsstring>(const char *s)</argsstring>
+        <name>convert</name>
+        <param>
+          <type>const char *</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/convert/opencv.hpp" line="72" column="22" bodyfile="_deps/argagg-src/include/argagg/convert/opencv.hpp" bodystart="132" bodyend="142"/>
+        <references refid="namespaceargagg_1_1convert_1a2624aa278ddbcde5062f46f3f7d51401" compoundref="argagg_8hpp" startline="1551" endline="1568">argagg::convert::parse_next_component</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Partially specializes <ref refid="structargagg_1_1convert_1_1converter" kindref="compound">argagg::convert::converter</ref> for the cv::Size_ type. Parses as a &apos;x&apos; separated pair of width and height. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="_deps/argagg-src/include/argagg/convert/opencv.hpp" line="71" column="3" bodyfile="_deps/argagg-src/include/argagg/convert/opencv.hpp" bodystart="71" bodyend="73"/>
+    <listofallmembers>
+      <member refid="structargagg_1_1convert_1_1converter_3_01cv_1_1Size___3_01T_01_4_01_4_1a9d4a5d4c716f62f02b7ff7816db76807" prot="public" virt="non-virtual"><scope>argagg::convert::converter&lt; cv::Size_&lt; T &gt; &gt;</scope><name>convert</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1csv" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::csv</compoundname>
+    <includes refid="csv_8hpp" local="no">csv.hpp</includes>
+    <templateparamlist>
+      <param>
+        <type>typename T</type>
+      </param>
+    </templateparamlist>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structargagg_1_1csv_1ac131a1d6f9b1f43f60196d33a2fa6586" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>&lt; T &gt;</type>
+        <definition>std::vector&lt;T&gt; argagg::csv&lt; T &gt;::values</definition>
+        <argsstring></argsstring>
+        <name>values</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/convert/csv.hpp" line="50" column="15" bodyfile="_deps/argagg-src/include/argagg/convert/csv.hpp" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Represents a list of comma-separated values. This is defined as a new type to embed the delimiter semantics into the type (if it was just a <ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref> then it&apos;s not clear what the delimiter is). </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="_deps/argagg-src/include/argagg/convert/csv.hpp" line="49" column="1" bodyfile="_deps/argagg-src/include/argagg/convert/csv.hpp" bodystart="49" bodyend="51"/>
+    <listofallmembers>
+      <member refid="structargagg_1_1csv_1ac131a1d6f9b1f43f60196d33a2fa6586" prot="public" virt="non-virtual"><scope>argagg::csv</scope><name>values</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O2 -g -DNDEBUG -rdynamic CMakeFiles/test-readme.dir/src/unit-readme.cpp.o CMakeFiles/doctest_main.dir/src/unit.cpp.o -o test-readme 

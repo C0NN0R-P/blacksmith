@@ -66,6 +66,6 @@ uint64_t static inline GB(uint64_t value) {
 #define CHANNEL 1
 
 // number of bytes to be allocated
-#define MEM_SIZE (GB(1))
+#define MEM_SIZE (MB(64))
 
 #endif /* GLOBAL_DEFINES */

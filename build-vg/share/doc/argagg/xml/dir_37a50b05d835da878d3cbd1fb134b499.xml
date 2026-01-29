@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="dir_37a50b05d835da878d3cbd1fb134b499" kind="dir">
+    <compoundname>_deps/argagg-src</compoundname>
+    <innerdir refid="dir_f2ce9d65f0fca7d01b7dadf4ec88bf08">_deps/argagg-src/doc</innerdir>
+    <innerdir refid="dir_078ae7873fe91beafa46989a84053501">_deps/argagg-src/include</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="_deps/argagg-src/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,265 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1parser__results" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::parser_results</compoundname>
+    <includes refid="argagg_8hpp" local="no">argagg.hpp</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structargagg_1_1parser__results_1ae2b1ba795d5b85f2daf2dd554bc956b9" prot="public" static="no" mutable="no">
+        <type>const char *</type>
+        <definition>const char* argagg::parser_results::program</definition>
+        <argsstring></argsstring>
+        <name>program</name>
+        <briefdescription>
+<para>Returns the name of the program from the original arguments list. This is always the first argument. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="418" column="14" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="418" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structargagg_1_1parser__results_1ae1aa657b375b7e4b5c918fa08ff402b7" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/container/unordered_map" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::unordered_map</ref>&lt; <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref>, <ref refid="structargagg_1_1option__results" kindref="compound">option_results</ref> &gt;</type>
+        <definition>std::unordered_map&lt;std::string, option_results&gt; argagg::parser_results::options</definition>
+        <argsstring></argsstring>
+        <name>options</name>
+        <briefdescription>
+<para>Maps from definition name to the structure which contains the parser results for that definition. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="425" column="22" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="425" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structargagg_1_1parser__results_1a159b7d39369d6a3bc76bb484a109d6cc" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>&lt; const char * &gt;</type>
+        <definition>std::vector&lt;const char*&gt; argagg::parser_results::pos</definition>
+        <argsstring></argsstring>
+        <name>pos</name>
+        <briefdescription>
+<para>Vector of positional arguments. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="431" column="15" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="431" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structargagg_1_1parser__results_1aa9ee92c458d2e79698db03e8aa350955" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::parser_results::has_option</definition>
+        <argsstring>(const std::string &amp;name) const</argsstring>
+        <name>has_option</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>name</declname>
+        </param>
+        <briefdescription>
+<para>Used to check if an option was specified at all. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="437" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="850" bodyend="854"/>
+        <references refid="structargagg_1_1parser__results_1ae1aa657b375b7e4b5c918fa08ff402b7" compoundref="argagg_8hpp" startline="425">options</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__results_1a4148c8c36d81d74fc80eada5072243eb" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="structargagg_1_1option__results" kindref="compound">option_results</ref> &amp;</type>
+        <definition>option_results &amp; argagg::parser_results::operator[]</definition>
+        <argsstring>(const std::string &amp;name)</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>name</declname>
+        </param>
+        <briefdescription>
+<para>Get the parser results for the given definition. If the definition never showed up then the exception from the unordered_map access will bubble through so check if the flag exists in the first place with <ref refid="structargagg_1_1parser__results_1aa9ee92c458d2e79698db03e8aa350955" kindref="member">has_option()</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="445" column="18" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="858" bodyend="865"/>
+        <references refid="structargagg_1_1parser__results_1ae1aa657b375b7e4b5c918fa08ff402b7" compoundref="argagg_8hpp" startline="425">options</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__results_1acd9edf5398da4c18c97dee7cb9acc8c2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const <ref refid="structargagg_1_1option__results" kindref="compound">option_results</ref> &amp;</type>
+        <definition>const option_results &amp; argagg::parser_results::operator[]</definition>
+        <argsstring>(const std::string &amp;name) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>name</declname>
+        </param>
+        <briefdescription>
+<para>Get the parser results for the given definition. If the definition never showed up then the exception from the unordered_map access will bubble through so check if the flag exists in the first place with <ref refid="structargagg_1_1parser__results_1aa9ee92c458d2e79698db03e8aa350955" kindref="member">has_option()</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="453" column="24" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="870" bodyend="877"/>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__results_1a085294825b4a65e62b48a9d36f5b8854" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="cpp/types/size_t" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::size_t</ref></type>
+        <definition>std::size_t argagg::parser_results::count</definition>
+        <argsstring>() const</argsstring>
+        <name>count</name>
+        <briefdescription>
+<para>Gets the number of positional arguments. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="459" column="15" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="881" bodyend="884"/>
+        <references refid="structargagg_1_1parser__results_1a159b7d39369d6a3bc76bb484a109d6cc" compoundref="argagg_8hpp" startline="431">pos</references>
+        <references refid="cpp/container/vector/size_1">std::vector&lt; T &gt;::size</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__results_1a8614c9b865eec3154170e58c9d77a2fc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const char *</type>
+        <definition>const char * argagg::parser_results::operator[]</definition>
+        <argsstring>(std::size_t index) const</argsstring>
+        <name>operator[]</name>
+        <param>
+          <type><ref refid="cpp/types/size_t" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::size_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+<para>Gets a positional argument by index. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="465" column="14" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="888" bodyend="891"/>
+        <references refid="structargagg_1_1parser__results_1a159b7d39369d6a3bc76bb484a109d6cc" compoundref="argagg_8hpp" startline="431">pos</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__results_1aca0b15689e4ec5d296fe300d2a4705cc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::parser_results::as</definition>
+        <argsstring>(std::size_t i=0) const</argsstring>
+        <name>as</name>
+        <param>
+          <type><ref refid="cpp/types/size_t" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::size_t</ref></type>
+          <declname>i</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+<para>Gets a positional argument converted to the given type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="472" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="895" bodyend="898"/>
+        <references refid="structargagg_1_1parser__results_1a159b7d39369d6a3bc76bb484a109d6cc" compoundref="argagg_8hpp" startline="431">pos</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__results_1a3ff0ea89f6a10dc05a77f77a6d457b2c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>&lt; T &gt;</type>
+        <definition>std::vector&lt; T &gt; argagg::parser_results::all_as</definition>
+        <argsstring>() const</argsstring>
+        <name>all_as</name>
+        <briefdescription>
+<para>Gets all positional arguments converted to the given type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="479" column="15" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="902" bodyend="911"/>
+        <references refid="namespaceargagg_1_1convert_1aa541be13778945d54dcfa232ca00c1cd" compoundref="argagg_8hpp" startline="1494" endline="1497">argagg::convert::arg</references>
+        <references refid="cpp/container/vector/begin_1">std::vector&lt; T &gt;::begin</references>
+        <references refid="structargagg_1_1parser__results_1a159b7d39369d6a3bc76bb484a109d6cc" compoundref="argagg_8hpp" startline="431">pos</references>
+        <references refid="cpp/container/vector/size_1">std::vector&lt; T &gt;::size</references>
+        <references refid="cpp/algorithm/transform_1">std::transform</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Represents all results of the parser including options and positional arguments. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="2">
+        <label>std::vector&lt; const char * &gt;</label>
+        <link refid="cpp/container/vector" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+      <node id="1">
+        <label>argagg::parser_results</label>
+        <link refid="structargagg_1_1parser__results"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>pos</edgelabel>
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>options</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>argagg::option_results</label>
+        <link refid="structargagg_1_1option__results"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>all</edgelabel>
+        </childnode>
+      </node>
+      <node id="8">
+        <label>std::basic_string&lt; char &gt;</label>
+        <link refid="cpp/string/basic_string" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+      <node id="5">
+        <label>std::vector&lt; argagg::option_result &gt;</label>
+        <link refid="cpp/container/vector" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="6" relation="usage">
+          <edgelabel>elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="6">
+        <label>argagg::option_result</label>
+        <link refid="structargagg_1_1option__result"/>
+      </node>
+      <node id="3">
+        <label>std::unordered_map&lt; std::string, argagg::option_results &gt;</label>
+        <link refid="cpp/container/unordered_map" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>elements</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>std::string</label>
+        <link refid="cpp/string/basic_string" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="8" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="411" column="1" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="411" bodyend="481"/>
+    <listofallmembers>
+      <member refid="structargagg_1_1parser__results_1a3ff0ea89f6a10dc05a77f77a6d457b2c" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>all_as</name></member>
+      <member refid="structargagg_1_1parser__results_1aca0b15689e4ec5d296fe300d2a4705cc" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>as</name></member>
+      <member refid="structargagg_1_1parser__results_1a085294825b4a65e62b48a9d36f5b8854" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>count</name></member>
+      <member refid="structargagg_1_1parser__results_1aa9ee92c458d2e79698db03e8aa350955" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>has_option</name></member>
+      <member refid="structargagg_1_1parser__results_1a4148c8c36d81d74fc80eada5072243eb" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>operator[]</name></member>
+      <member refid="structargagg_1_1parser__results_1acd9edf5398da4c18c97dee7cb9acc8c2" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>operator[]</name></member>
+      <member refid="structargagg_1_1parser__results_1a8614c9b865eec3154170e58c9d77a2fc" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>operator[]</name></member>
+      <member refid="structargagg_1_1parser__results_1ae1aa657b375b7e4b5c918fa08ff402b7" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>options</name></member>
+      <member refid="structargagg_1_1parser__results_1a159b7d39369d6a3bc76bb484a109d6cc" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>pos</name></member>
+      <member refid="structargagg_1_1parser__results_1ae2b1ba795d5b85f2daf2dd554bc956b9" prot="public" virt="non-virtual"><scope>argagg::parser_results</scope><name>program</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

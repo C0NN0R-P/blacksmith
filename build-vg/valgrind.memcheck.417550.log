@@ -1,0 +1,92 @@
+==417550== Memcheck, a memory error detector
+==417550== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==417550== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+==417550== Command: ./blacksmith --dimm-id 1 --ranks 1 --runtime-limit 5 --acts-per-ref 1000 --probes 1
+==417550== Parent PID: 417549
+==417550== 
+==417550== Warning: set address range perms: large range [0x5400000, 0x45400000) (undefined)
+==417550== 
+==417550== Process terminating with default action of signal 2 (SIGINT)
+==417550==    at 0x110870: ??? (in /home/cim/pgr/pmai286/blacksmith/build-vg/blacksmith)
+==417550==    by 0x1BDC3E: Memory::initialize(DATA_PATTERN) (Memory.cpp:55)
+==417550==    by 0x1BDA2C: Memory::allocate_memory(unsigned long) (Memory.cpp:44)
+==417550==    by 0x111721: main (Blacksmith.cpp:77)
+==417550== 
+==417550== HEAP SUMMARY:
+==417550==     in use at exit: 1,073,824,253 bytes in 6 blocks
+==417550==   total heap usage: 131 allocs, 125 frees, 1,073,838,655 bytes allocated
+==417550== 
+==417550== 37 bytes in 1 blocks are still reachable in loss record 1 of 6
+==417550==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==417550==    by 0x4A1B0BD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x4A1C25D: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_replace(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x4A15759: std::__cxx11::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::str() const (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x19B0DA: uuid::gen_uuid() (Uuid.hpp:42)
+==417550==    by 0x19C0D6: HammeringPattern::HammeringPattern() (HammeringPattern.cpp:46)
+==417550==    by 0x12DECB: __static_initialization_and_destruction_0(int, int) (FuzzyHammerer.cpp:13)
+==417550==    by 0x12DF08: _GLOBAL__sub_I__ZN13FuzzyHammerer18cnt_pattern_probesE (FuzzyHammerer.cpp:394)
+==417550==    by 0x4C2DEBA: call_init (libc-start.c:145)
+==417550==    by 0x4C2DEBA: __libc_start_main@@GLIBC_2.34 (libc-start.c:379)
+==417550==    by 0x110974: (below main) (in /home/cim/pgr/pmai286/blacksmith/build-vg/blacksmith)
+==417550== 
+==417550== 472 bytes in 1 blocks are still reachable in loss record 2 of 6
+==417550==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==417550==    by 0x4C8364D: __fopen_internal (iofopen.c:65)
+==417550==    by 0x4C8364D: fopen@@GLIBC_2.2.5 (iofopen.c:86)
+==417550==    by 0x499FBB3: std::__basic_file<char>::open(char const*, std::_Ios_Openmode, int) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x49E7FFD: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x49E8126: std::basic_ofstream<char, std::char_traits<char> >::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x1C6F1A: Logger::initialize() (Logger.cpp:17)
+==417550==    by 0x111635: main (Blacksmith.cpp:61)
+==417550== 
+==417550== 1,024 bytes in 1 blocks are still reachable in loss record 3 of 6
+==417550==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==417550==    by 0x4C82BA3: _IO_file_doallocate (filedoalloc.c:101)
+==417550==    by 0x4C91CDF: _IO_doallocbuf (genops.c:347)
+==417550==    by 0x4C90F5F: _IO_file_overflow@@GLIBC_2.2.5 (fileops.c:744)
+==417550==    by 0x4C8F6D4: _IO_new_file_xsputn (fileops.c:1243)
+==417550==    by 0x4C8F6D4: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1196)
+==417550==    by 0x4C83FD6: fwrite (iofwrite.c:39)
+==417550==    by 0x4A0BB64: std::basic_ostream<char, std::char_traits<char> >& std::__ostream_insert<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*, long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x4A0BEBA: std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x1C6EB4: Logger::initialize() (Logger.cpp:15)
+==417550==    by 0x111635: main (Blacksmith.cpp:61)
+==417550== 
+==417550== 8,192 bytes in 1 blocks are still reachable in loss record 4 of 6
+==417550==    at 0x484A2F3: operator new[](unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==417550==    by 0x49E4023: std::basic_filebuf<char, std::char_traits<char> >::_M_allocate_internal_buffer() (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x49E8015: std::basic_filebuf<char, std::char_traits<char> >::open(char const*, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x49E8126: std::basic_ofstream<char, std::char_traits<char> >::open(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::_Ios_Openmode) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x1C6F1A: Logger::initialize() (Logger.cpp:17)
+==417550==    by 0x111635: main (Blacksmith.cpp:61)
+==417550== 
+==417550== 72,704 bytes in 1 blocks are still reachable in loss record 5 of 6
+==417550==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==417550==    by 0x4979939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==417550==    by 0x400647D: call_init.part.0 (dl-init.c:70)
+==417550==    by 0x4006567: call_init (dl-init.c:33)
+==417550==    by 0x4006567: _dl_init (dl-init.c:117)
+==417550==    by 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+==417550==    by 0xA: ???
+==417550==    by 0x1FFF000CAE: ???
+==417550==    by 0x1FFF000CBB: ???
+==417550==    by 0x1FFF000CC5: ???
+==417550==    by 0x1FFF000CC7: ???
+==417550==    by 0x1FFF000CCF: ???
+==417550==    by 0x1FFF000CD1: ???
+==417550== 
+==417550== 1,073,741,824 bytes in 1 blocks are still reachable in loss record 6 of 6
+==417550==    at 0x484DE30: memalign (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==417550==    by 0x484DF92: posix_memalign (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==417550==    by 0x1BD8BD: Memory::allocate_memory(unsigned long) (Memory.cpp:27)
+==417550==    by 0x111721: main (Blacksmith.cpp:77)
+==417550== 
+==417550== LEAK SUMMARY:
+==417550==    definitely lost: 0 bytes in 0 blocks
+==417550==    indirectly lost: 0 bytes in 0 blocks
+==417550==      possibly lost: 0 bytes in 0 blocks
+==417550==    still reachable: 1,073,824,253 bytes in 6 blocks
+==417550==         suppressed: 0 bytes in 0 blocks
+==417550== 
+==417550== For lists of detected and suppressed errors, rerun with: -s
+==417550== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

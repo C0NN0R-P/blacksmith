@@ -1,0 +1,207 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1fmt__ostream" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::fmt_ostream</compoundname>
+    <basecompoundref refid="cpp/io/basic_ostringstream" prot="public" virt="non-virtual">std::ostringstream</basecompoundref>
+    <includes refid="argagg_8hpp" local="no">argagg.hpp</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structargagg_1_1fmt__ostream_1a1ce78b84202689cc34781b98eec1050b" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/io/basic_ostream" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::ostream</ref> &amp;</type>
+        <definition>std::ostream&amp; argagg::fmt_ostream::output</definition>
+        <argsstring></argsstring>
+        <name>output</name>
+        <briefdescription>
+<para>Reference to the final output stream that the formatted string will be streamed to. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="690" column="16" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="690" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structargagg_1_1fmt__ostream_1ad726515e75c97baeab0db14ff82d2db5" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>argagg::fmt_ostream::fmt_ostream</definition>
+        <argsstring>(std::ostream &amp;output)</argsstring>
+        <name>fmt_ostream</name>
+        <param>
+          <type><ref refid="cpp/io/basic_ostream" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::ostream</ref> &amp;</type>
+          <declname>output</declname>
+        </param>
+        <briefdescription>
+<para>Construct to output to the provided output stream when this object is destroyed. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="697" column="3" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1575" bodyend="1578"/>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1fmt__ostream_1a64eb8576f2a4fe32162f52dac354ad8c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>argagg::fmt_ostream::~fmt_ostream</definition>
+        <argsstring>()</argsstring>
+        <name>~fmt_ostream</name>
+        <briefdescription>
+<para>Special destructor that will format the accumulated string using fmt (via the <ref refid="namespaceargagg_1ae9d8a0de66b416e737bddcb36a9eddf0" kindref="member">argagg::fmt_string()</ref> function) and stream it to the <ref refid="cpp/io/basic_ostream" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::ostream</ref> stored. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="705" column="3" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1582" bodyend="1585"/>
+        <references refid="namespaceargagg_1ae9d8a0de66b416e737bddcb36a9eddf0" compoundref="argagg_8hpp" startline="1669" endline="1684">argagg::fmt_string</references>
+        <references refid="structargagg_1_1fmt__ostream_1a1ce78b84202689cc34781b98eec1050b" compoundref="argagg_8hpp" startline="690">output</references>
+        <references refid="cpp/io/basic_ostringstream/str_1">std::ostringstream::str</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>A convenience output stream that will accumulate what is streamed to it and then, on destruction, format the accumulated string (via the <ref refid="namespaceargagg_1ae9d8a0de66b416e737bddcb36a9eddf0" kindref="member">argagg::fmt_string()</ref> function) to the provided <ref refid="cpp/io/basic_ostream" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::ostream</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Example use:</para>
+<para><programlisting><codeline><highlight class="normal">{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>argagg::fmt_ostream<sp/>f(std::cerr);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>f<sp/>&lt;&lt;<sp/>&quot;Usage:<sp/>&quot;<sp/>&lt;&lt;<sp/>really_long_string<sp/>&lt;&lt;<sp/>&apos;\n&apos;;</highlight></codeline>
+<codeline><highlight class="normal">}<sp/>//<sp/>on<sp/>destruction<sp/>here<sp/>the<sp/>formatted<sp/>string<sp/>will<sp/>be<sp/>streamed<sp/>to<sp/>std::cerr</highlight></codeline>
+</programlisting> </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>std::ostringstream</label>
+        <link refid="cpp/io/basic_ostringstream" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_ostringstream&lt; char &gt;</label>
+        <link refid="cpp/io/basic_ostringstream" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>argagg::fmt_ostream</label>
+        <link refid="structargagg_1_1fmt__ostream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::basic_ios&lt; char &gt;</label>
+        <link refid="cpp/io/basic_ios" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::ios_base</label>
+        <link refid="cpp/io/ios_base" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+      <node id="4">
+        <label>std::basic_ostream&lt; char &gt;</label>
+        <link refid="cpp/io/basic_ostream" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>std::ostringstream</label>
+        <link refid="cpp/io/basic_ostringstream" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_ostringstream&lt; char &gt;</label>
+        <link refid="cpp/io/basic_ostringstream" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>argagg::fmt_ostream</label>
+        <link refid="structargagg_1_1fmt__ostream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>output</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::basic_ios&lt; char &gt;</label>
+        <link refid="cpp/io/basic_ios" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>std::ios_base</label>
+        <link refid="cpp/io/ios_base" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+      <node id="7">
+        <label>std::ostream</label>
+        <link refid="cpp/io/basic_ostream" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::basic_ostream&lt; char &gt;</label>
+        <link refid="cpp/io/basic_ostream" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="683" column="1" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="683" bodyend="707"/>
+    <listofallmembers>
+      <member refid="cpp/io/basic_ios/bad_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>bad</name></member>
+      <member refid="cpp/io/basic_ios/basic_ios_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>basic_ios</name></member>
+      <member refid="cpp/io/basic_ostream/basic_ostream_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>basic_ostream</name></member>
+      <member refid="cpp/io/basic_ostringstream/basic_ostringstream_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>basic_ostringstream</name></member>
+      <member refid="cpp/io/basic_ios/clear_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>clear</name></member>
+      <member refid="cpp/io/basic_ios/copyfmt_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>copyfmt</name></member>
+      <member refid="cpp/io/basic_ios/eof_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>eof</name></member>
+      <member refid="cpp/io/basic_ios/exceptions_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>exceptions</name></member>
+      <member refid="cpp/io/basic_ios/fail_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>fail</name></member>
+      <member refid="cpp/io/basic_ios/fill_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>fill</name></member>
+      <member refid="cpp/io/ios_base/flags_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>flags</name></member>
+      <member refid="cpp/io/basic_ostream/flush_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>flush</name></member>
+      <member refid="structargagg_1_1fmt__ostream_1ad726515e75c97baeab0db14ff82d2db5" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>fmt_ostream</name></member>
+      <member refid="cpp/io/ios_base/getloc_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>getloc</name></member>
+      <member refid="cpp/io/basic_ios/good_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>good</name></member>
+      <member refid="cpp/io/basic_ios/imbue_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>imbue</name></member>
+      <member refid="cpp/io/basic_ios/init_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>init</name></member>
+      <member refid="cpp/io/ios_base/ios_base_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>ios_base</name></member>
+      <member refid="cpp/io/ios_base/iword_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>iword</name></member>
+      <member refid="cpp/io/basic_ios/move_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>move</name></member>
+      <member refid="cpp/io/basic_ios/narrow_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>narrow</name></member>
+      <member refid="cpp/io/basic_ios/operator_bool_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>operator bool</name></member>
+      <member refid="cpp/io/basic_ios/operator!_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>operator!</name></member>
+      <member refid="cpp/io/basic_ostream/operator_ltlt_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>operator&lt;&lt;</name></member>
+      <member refid="cpp/io/basic_ostringstream/operator=_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>operator=</name></member>
+      <member refid="cpp/io/basic_ostringstream/basic_ostringstream_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>ostringstream</name></member>
+      <member refid="structargagg_1_1fmt__ostream_1a1ce78b84202689cc34781b98eec1050b" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>output</name></member>
+      <member refid="cpp/io/ios_base/precision_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>precision</name></member>
+      <member refid="cpp/io/basic_ostream/put_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>put</name></member>
+      <member refid="cpp/io/ios_base/pword_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>pword</name></member>
+      <member refid="cpp/io/basic_ios/rdbuf_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>rdbuf</name></member>
+      <member refid="cpp/io/basic_ios/rdstate_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>rdstate</name></member>
+      <member refid="cpp/io/ios_base/register_callback_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>register_callback</name></member>
+      <member refid="cpp/io/basic_ostream/seekp_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>seekp</name></member>
+      <member refid="cpp/io/basic_ios/set_rdbuf_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>set_rdbuf</name></member>
+      <member refid="cpp/io/ios_base/setf_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>setf</name></member>
+      <member refid="cpp/io/basic_ios/setstate_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>setstate</name></member>
+      <member refid="cpp/io/basic_ostringstream/str_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>str</name></member>
+      <member refid="cpp/io/basic_ios/swap_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>swap</name></member>
+      <member refid="cpp/io/ios_base/sync_with_stdio_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>sync_with_stdio</name></member>
+      <member refid="cpp/io/basic_ostream/tellp_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>tellp</name></member>
+      <member refid="cpp/io/basic_ios/tie_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>tie</name></member>
+      <member refid="cpp/io/ios_base/unsetf_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>unsetf</name></member>
+      <member refid="cpp/io/basic_ios/widen_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>widen</name></member>
+      <member refid="cpp/io/ios_base/width_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>width</name></member>
+      <member refid="cpp/io/basic_ostream/write_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>write</name></member>
+      <member refid="cpp/io/ios_base/xalloc_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>xalloc</name></member>
+      <member refid="cpp/io/basic_ios/~basic_ios_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>~basic_ios</name></member>
+      <member refid="cpp/io/basic_ostream/~basic_ostream_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>~basic_ostream</name></member>
+      <member refid="structargagg_1_1fmt__ostream_1a64eb8576f2a4fe32162f52dac354ad8c" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>~fmt_ostream</name></member>
+      <member refid="cpp/io/ios_base/~ios_base_1" prot="public" virt="non-virtual"><scope>argagg::fmt_ostream</scope><name>~ios_base</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1definition" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::definition</compoundname>
+    <includes refid="argagg_8hpp" local="no">argagg.hpp</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structargagg_1_1definition_1aa643462790e7ab53d6117c2379623fac" prot="public" static="no" mutable="no">
+        <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref></type>
+        <definition>const std::string argagg::definition::name</definition>
+        <argsstring></argsstring>
+        <name>name</name>
+        <briefdescription>
+<para>Name of the option. Option parser results are keyed by this name. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="494" column="21" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="494" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structargagg_1_1definition_1ab9adef6212afbede457ad8732dcc71af" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/container/vector" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::vector</ref>&lt; <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &gt;</type>
+        <definition>std::vector&lt;std::string&gt; argagg::definition::flags</definition>
+        <argsstring></argsstring>
+        <name>flags</name>
+        <briefdescription>
+<para>List of strings to match that correspond to this option. Should be fully specified with hyphens (e.g. &quot;-v&quot; or &quot;--verbose&quot;). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="501" column="15" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="501" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structargagg_1_1definition_1acfdfcfec4973adeb5da690b49447005c" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref></type>
+        <definition>std::string argagg::definition::help</definition>
+        <argsstring></argsstring>
+        <name>help</name>
+        <briefdescription>
+<para>Help string for this option. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="507" column="15" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="507" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structargagg_1_1definition_1aea9f1067d6254e6d440777851791aedb" prot="public" static="no" mutable="no">
+        <type>unsigned int</type>
+        <definition>unsigned int argagg::definition::num_args</definition>
+        <argsstring></argsstring>
+        <name>num_args</name>
+        <briefdescription>
+<para>Number of arguments this option requires. Must be 0 or 1. All other values have undefined behavior. Okay, the code actually works with positive values in general, but it&apos;s unorthodox command line behavior. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="515" column="16" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="515" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structargagg_1_1definition_1a70e132e1f3f5afec475374b45e93b790" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::definition::wants_no_arguments</definition>
+        <argsstring>() const</argsstring>
+        <name>wants_no_arguments</name>
+        <briefdescription>
+<para>Returns true if this option does not want any arguments. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="521" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="915" bodyend="918"/>
+        <references refid="structargagg_1_1definition_1aea9f1067d6254e6d440777851791aedb" compoundref="argagg_8hpp" startline="515">num_args</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1definition_1a1c666fff3487eba0a76d5e2f1c119736" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::definition::requires_arguments</definition>
+        <argsstring>() const</argsstring>
+        <name>requires_arguments</name>
+        <briefdescription>
+<para>Returns true if this option requires arguments. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="527" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="922" bodyend="925"/>
+        <references refid="structargagg_1_1definition_1aea9f1067d6254e6d440777851791aedb" compoundref="argagg_8hpp" startline="515">num_args</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>An option definition which essentially represents what an option is. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>argagg::definition</label>
+        <link refid="structargagg_1_1definition"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>help</edgelabel>
+          <edgelabel>name</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>flags</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::basic_string&lt; char &gt;</label>
+        <link refid="cpp/string/basic_string" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+      <node id="4">
+        <label>std::vector&lt; std::string &gt;</label>
+        <link refid="cpp/container/vector" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::string</label>
+        <link refid="cpp/string/basic_string" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="488" column="1" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="488" bodyend="529"/>
+    <listofallmembers>
+      <member refid="structargagg_1_1definition_1ab9adef6212afbede457ad8732dcc71af" prot="public" virt="non-virtual"><scope>argagg::definition</scope><name>flags</name></member>
+      <member refid="structargagg_1_1definition_1acfdfcfec4973adeb5da690b49447005c" prot="public" virt="non-virtual"><scope>argagg::definition</scope><name>help</name></member>
+      <member refid="structargagg_1_1definition_1aa643462790e7ab53d6117c2379623fac" prot="public" virt="non-virtual"><scope>argagg::definition</scope><name>name</name></member>
+      <member refid="structargagg_1_1definition_1aea9f1067d6254e6d440777851791aedb" prot="public" virt="non-virtual"><scope>argagg::definition</scope><name>num_args</name></member>
+      <member refid="structargagg_1_1definition_1a1c666fff3487eba0a76d5e2f1c119736" prot="public" virt="non-virtual"><scope>argagg::definition</scope><name>requires_arguments</name></member>
+      <member refid="structargagg_1_1definition_1a70e132e1f3f5afec475374b45e93b790" prot="public" virt="non-virtual"><scope>argagg::definition</scope><name>wants_no_arguments</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

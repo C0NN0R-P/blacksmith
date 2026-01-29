@@ -1,0 +1,178 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="root_8md" kind="file" language="Markdown">
+    <compoundname>root.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">Argument<sp/>Aggregator<sp/>{#mainpage}</highlight></codeline>
+<codeline><highlight class="normal">===================</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>the<sp/>Doxygen<sp/>documentation<sp/>for<sp/>Argument<sp/>Aggregator,<sp/>a<sp/>simple<sp/>C++11<sp/>argument<sp/>parser.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>use<sp/>just<sp/>create<sp/>an<sp/>argagg::parser<sp/>object.<sp/>However,<sp/>the<sp/>struct<sp/>doesn&apos;t<sp/>provide<sp/>any<sp/>explicit<sp/>methods<sp/>for<sp/>defining<sp/>flags.<sp/>Instead<sp/>we<sp/>define<sp/>the<sp/>flags<sp/>using<sp/>initialization<sp/>lists.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>argagg::parser<sp/>argparser<sp/>{{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/>&quot;help&quot;,<sp/>{&quot;-h&quot;,<sp/>&quot;--help&quot;},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;shows<sp/>this<sp/>help<sp/>message&quot;,<sp/>0},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/>&quot;delim&quot;,<sp/>{&quot;-d&quot;,<sp/>&quot;--delim&quot;},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;delimiter<sp/>(default:<sp/>,)&quot;,<sp/>1},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{<sp/>&quot;num&quot;,<sp/>{&quot;-n&quot;,<sp/>&quot;--num&quot;},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;number&quot;,<sp/>1},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}};</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">An<sp/>option<sp/>is<sp/>specified<sp/>by<sp/>four<sp/>things:<sp/>the<sp/>name<sp/>of<sp/>the<sp/>option,<sp/>the<sp/>strings<sp/>that<sp/>activate<sp/>the<sp/>option<sp/>(flags),<sp/>the<sp/>option&apos;s<sp/>help<sp/>message,<sp/>and<sp/>the<sp/>number<sp/>of<sp/>arguments<sp/>the<sp/>option<sp/>expects.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">With<sp/>the<sp/>parser<sp/>defined<sp/>you<sp/>actually<sp/>parse<sp/>the<sp/>arguments<sp/>by<sp/>calling<sp/>the<sp/>argagg::parser::parse()<sp/>method.<sp/>If<sp/>there<sp/>are<sp/>any<sp/>problems<sp/>then<sp/>an<sp/>exception<sp/>is<sp/>thrown.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>argagg::parser_results<sp/>args;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>try<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>args<sp/>=<sp/>argparser.parse(argc,<sp/>argv);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/>catch<sp/>(const<sp/>std::exception&amp;<sp/>e)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::cerr<sp/>&lt;&lt;<sp/>e.what()<sp/>&lt;&lt;<sp/>&apos;\n&apos;;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>EXIT_FAILURE;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">You<sp/>can<sp/>check<sp/>if<sp/>an<sp/>option<sp/>shows<sp/>up<sp/>in<sp/>the<sp/>command<sp/>line<sp/>arguments<sp/>by<sp/>accessing<sp/>the<sp/>option<sp/>by<sp/>name<sp/>from<sp/>the<sp/>parser<sp/>results<sp/>and<sp/>using<sp/>the<sp/>implicit<sp/>boolean<sp/>conversion.<sp/>You<sp/>can<sp/>write<sp/>out<sp/>a<sp/>simplistic<sp/>option<sp/>help<sp/>message<sp/>by<sp/>streaming<sp/>the<sp/>argagg::parser<sp/>instance<sp/>itself.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(args[&quot;help&quot;])<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::cerr<sp/>&lt;&lt;<sp/>argparser;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/>-h,<sp/>--help</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>shows<sp/>this<sp/>help<sp/>message</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/>-d,<sp/>--delim</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delimiter<sp/>(default:<sp/>,)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/>-n,<sp/>--num</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>number</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>EXIT_SUCCESS;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">That<sp/>help<sp/>message<sp/>is<sp/>only<sp/>for<sp/>the<sp/>flags.<sp/>If<sp/>you<sp/>want<sp/>a<sp/>usage<sp/>message<sp/>it&apos;s<sp/>up<sp/>to<sp/>you<sp/>to<sp/>provide<sp/>it.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(args[&quot;help&quot;])<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>std::cerr<sp/>&lt;&lt;<sp/>&quot;Usage:<sp/>program<sp/>[options]<sp/>ARG1<sp/>ARG2\n&quot;<sp/>&lt;&lt;<sp/>argparser;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/>Usage:<sp/>program<sp/>[options]<sp/>ARG1<sp/>ARG2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/>-h,<sp/>--help</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>shows<sp/>this<sp/>help<sp/>message</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/>-d,<sp/>--delim</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delimiter<sp/>(default:<sp/>,)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/>-n,<sp/>--num</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>number</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>EXIT_SUCCESS;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>special<sp/>output<sp/>stream,<sp/>argagg::fmt_ostream,<sp/>is<sp/>provided<sp/>that<sp/>will<sp/>run<sp/>the<sp/>usage<sp/>and<sp/>help<sp/>through<sp/>`fmt`<sp/>for<sp/>nice<sp/>word<sp/>wrapping<sp/>(see<sp/>`./examples/joinargs.cpp`<sp/>for<sp/>a<sp/>better<sp/>example).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(args[&quot;help&quot;])<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>argagg::fmt_ostream<sp/>fmt(std::cerr);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>fmt<sp/>&lt;&lt;<sp/>&quot;Usage:<sp/>program<sp/>[options]<sp/>ARG1<sp/>ARG2\n&quot;<sp/>&lt;&lt;<sp/>argparser;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>EXIT_SUCCESS;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Generally<sp/>argagg<sp/>tries<sp/>to<sp/>do<sp/>a<sp/>minimal<sp/>amount<sp/>of<sp/>work<sp/>to<sp/>leave<sp/>most<sp/>of<sp/>the<sp/>control<sp/>with<sp/>the<sp/>user.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">If<sp/>you<sp/>want<sp/>to<sp/>get<sp/>an<sp/>option<sp/>argument<sp/>but<sp/>fallback<sp/>on<sp/>a<sp/>default<sp/>value<sp/>if<sp/>it<sp/>doesn&apos;t<sp/>exist<sp/>then<sp/>you<sp/>can<sp/>use<sp/>the<sp/>argagg::option_results::as()<sp/>API<sp/>and<sp/>provide<sp/>a<sp/>default<sp/>value.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>auto<sp/>delim<sp/>=<sp/>args[&quot;delim&quot;].as&lt;std::string&gt;(&quot;,&quot;);</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">If<sp/>you<sp/>don&apos;t<sp/>mind<sp/>being<sp/>implicit<sp/>an<sp/>implicit<sp/>conversion<sp/>operator<sp/>is<sp/>provided<sp/>allowing<sp/>you<sp/>to<sp/>write<sp/>simple<sp/>assignments.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>int<sp/>x<sp/>=<sp/>0;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(args[&quot;num&quot;])<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>x<sp/>=<sp/>args[&quot;num&quot;];</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Finally,<sp/>you<sp/>can<sp/>get<sp/>all<sp/>of<sp/>the<sp/>positional<sp/>arguments<sp/>as<sp/>an<sp/>std::vector<sp/>using<sp/>the<sp/>argagg::parser_results::pos<sp/>member.<sp/>You<sp/>can<sp/>alternatively<sp/>convert<sp/>individual<sp/>positional<sp/>arguments<sp/>using<sp/>the<sp/>same<sp/>conversion<sp/>functions<sp/>as<sp/>the<sp/>option<sp/>argument<sp/>conversion<sp/>methods.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>auto<sp/>y<sp/>=<sp/>0.0;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(args.pos.size()<sp/>&gt;<sp/>0)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>y<sp/>=<sp/>args.as&lt;double&gt;(0);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">One<sp/>can<sp/>also<sp/>specify<sp/>`--`<sp/>on<sp/>the<sp/>command<sp/>line<sp/>in<sp/>order<sp/>to<sp/>treat<sp/>all<sp/>following<sp/>arguments<sp/>as<sp/>not<sp/>options.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">For<sp/>a<sp/>more<sp/>detailed<sp/>treatment<sp/>take<sp/>a<sp/>look<sp/>at<sp/>the<sp/>examples<sp/>or<sp/>test<sp/>cases.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Custom<sp/>argument<sp/>conversion<sp/>functions<sp/>can<sp/>also<sp/>be<sp/>defined<sp/>by<sp/>specializing<sp/>either<sp/>argagg::convert::arg&lt;T&gt;()<sp/>or<sp/>argagg::convert::converter&lt;T&gt;.<sp/>See<sp/>test_csv.cpp<sp/>as<sp/>well<sp/>as<sp/>`TEST_CASE(&quot;custom<sp/>conversion<sp/>function&quot;)`<sp/>and<sp/>`TEST_CASE(&quot;parse_next_component()<sp/>example&quot;)`<sp/>in<sp/>test.cpp.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Mental<sp/>Model</highlight></codeline>
+<codeline><highlight class="normal">------------</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>parser<sp/>just<sp/>returns<sp/>a<sp/>structure<sp/>of<sp/>pointers<sp/>to<sp/>the<sp/>C-strings<sp/>in<sp/>the<sp/>original<sp/>`argv`<sp/>array.<sp/>The<sp/>@ref<sp/>argagg::parser::parse()<sp/>method<sp/>returns<sp/>a<sp/>@ref<sp/>argagg::parser_results<sp/>object<sp/>which<sp/>has<sp/>two<sp/>things:<sp/>position<sp/>arguments<sp/>and<sp/>option<sp/>results.<sp/>The<sp/>position<sp/>arguments<sp/>are<sp/>just<sp/>a<sp/>@ref<sp/>std::vector<sp/>of<sp/>`const<sp/>char*`.<sp/>The<sp/>option<sp/>results<sp/>are<sp/>a<sp/>mapping<sp/>from<sp/>option<sp/>name<sp/>(@ref<sp/>std::string)<sp/>to<sp/>@ref<sp/>argagg::option_results<sp/>objects.<sp/>The<sp/>@ref<sp/>argagg::option_results<sp/>objects<sp/>are<sp/>just<sp/>an<sp/>@ref<sp/>std::vector<sp/>of<sp/>@ref<sp/>argagg::option_result<sp/>objects.<sp/>Each<sp/>instance<sp/>of<sp/>an<sp/>@ref<sp/>argagg::option_result<sp/>represents<sp/>the<sp/>option<sp/>showing<sp/>up<sp/>on<sp/>the<sp/>command<sp/>line.<sp/>If<sp/>there<sp/>was<sp/>an<sp/>argument<sp/>associated<sp/>with<sp/>it<sp/>then<sp/>the<sp/>@ref<sp/>argagg::option_result::arg<sp/>member<sp/>will<sp/>*not*<sp/>be<sp/>`nullptr`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Consider<sp/>the<sp/>following<sp/>command:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>gcc<sp/>-g<sp/>-I/usr/local/include<sp/>-I.<sp/>-o<sp/>test<sp/>main.o<sp/>foo.o<sp/>-L/usr/local/lib<sp/>-lz<sp/>bar.o<sp/>-lpng</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>would<sp/>produce<sp/>a<sp/>structure<sp/>like<sp/>follows,<sp/>written<sp/>in<sp/>psuedo-YAML,<sp/>where<sp/>each<sp/>string<sp/>is<sp/>actually<sp/>a<sp/>`const<sp/>char*`<sp/>pointing<sp/>to<sp/>some<sp/>part<sp/>of<sp/>a<sp/>string<sp/>in<sp/>the<sp/>original<sp/>`argv`<sp/>array:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>parser_results:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>program:<sp/>&quot;gcc&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>pos:<sp/>[&quot;main.o&quot;,<sp/>&quot;foo.o&quot;,<sp/>&quot;bar.o&quot;]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>options:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>version:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>debug:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>all:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-<sp/>arg:<sp/>null</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>include_path:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>all:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-<sp/>arg:<sp/>&quot;/usr/local/include&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-<sp/>arg:<sp/>&quot;.&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>library_path:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>all:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-<sp/>arg:<sp/>&quot;/usr/local/lib&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>library:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>all:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-<sp/>arg:<sp/>&quot;z&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-<sp/>arg:<sp/>&quot;png&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>output:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>all:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>-<sp/>arg:<sp/>&quot;test&quot;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Conversion<sp/>to<sp/>types<sp/>occurs<sp/>at<sp/>the<sp/>very<sp/>end<sp/>when<sp/>the<sp/>`as&lt;T&gt;()`<sp/>API<sp/>is<sp/>used.<sp/>Up<sp/>to<sp/>that<sp/>point<sp/>`argagg`<sp/>is<sp/>just<sp/>dealing<sp/>with<sp/>C-strings.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Installation</highlight></codeline>
+<codeline><highlight class="normal">------------</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">There<sp/>is<sp/>just<sp/>a<sp/>single<sp/>required<sp/>header<sp/>file<sp/>(`argagg.hpp`)<sp/>so<sp/>you<sp/>can<sp/>copy<sp/>that<sp/>whereever<sp/>you<sp/>want.<sp/>If<sp/>you<sp/>want<sp/>to<sp/>properly<sp/>install<sp/>it<sp/>you<sp/>can<sp/>use<sp/>the<sp/>CMake<sp/>script.<sp/>The<sp/>CMake<sp/>script<sp/>exists<sp/>primarily<sp/>to<sp/>build<sp/>the<sp/>tests<sp/>and<sp/>documentation,<sp/>but<sp/>an<sp/>install<sp/>target<sp/>for<sp/>the<sp/>header<sp/>is<sp/>provided<sp/>which<sp/>will<sp/>install<sp/>all<sp/>header<sp/>files.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>standard<sp/>installation<sp/>dance<sp/>using<sp/>CMake<sp/>and<sp/>`make`<sp/>is<sp/>as<sp/>follows:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>mkdir<sp/>build</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd<sp/>build</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cmake<sp/>-DCMAKE_INSTALL_PREFIX=/usr/local<sp/>..</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>make<sp/>install</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>ctest<sp/>-V<sp/>#<sp/>optionally<sp/>run<sp/>tests</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Override<sp/>[`CMAKE_INSTALL_PREFIX`](https://cmake.org/cmake/help/v2.8.12/cmake.html#variable:CMAKE_INSTALL_PREFIX)<sp/>to<sp/>change<sp/>the<sp/>installation<sp/>location.<sp/>By<sp/>default<sp/>(on<sp/>UNIX<sp/>variants)<sp/>it<sp/>will<sp/>install<sp/>to<sp/>`/usr/local`<sp/>resulting<sp/>in<sp/>the<sp/>header<sp/>being<sp/>copied<sp/>to<sp/>`/usr/local/include/argagg/argagg.hpp`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">If<sp/>you<sp/>have<sp/>[Doxygen](http://www.stack.nl/~dimitri/doxygen/)<sp/>it<sp/>should<sp/>build<sp/>and<sp/>install<sp/>documentation<sp/>as<sp/>well.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">There<sp/>are<sp/>no<sp/>dependencies<sp/>other<sp/>than<sp/>the<sp/>standard<sp/>library.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Edge<sp/>Cases</highlight></codeline>
+<codeline><highlight class="normal">----------</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">There<sp/>are<sp/>some<sp/>interesting<sp/>edge<sp/>cases<sp/>that<sp/>show<sp/>up<sp/>in<sp/>option<sp/>parsing.<sp/>I<sp/>used<sp/>the<sp/>behavior<sp/>of<sp/>`gcc`<sp/>as<sp/>my<sp/>target<sp/>reference<sp/>in<sp/>these<sp/>cases.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Greedy<sp/>Arguments</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Remember<sp/>that<sp/>options<sp/>that<sp/>require<sp/>arguments<sp/>will<sp/>greedily<sp/>process<sp/>arguments.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Say<sp/>we<sp/>have<sp/>the<sp/>following<sp/>options:<sp/>`-a`,<sp/>`-b`,<sp/>`-c`,<sp/>and<sp/>`-o`.<sp/>They<sp/>all<sp/>don&apos;t<sp/>accept<sp/>arguments<sp/>except<sp/>`-o`.<sp/>Below<sp/>is<sp/>a<sp/>list<sp/>of<sp/>permutations<sp/>for<sp/>short<sp/>flag<sp/>grouping<sp/>and<sp/>the<sp/>results:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>`-abco<sp/>foo`:<sp/>`-o`&apos;s<sp/>argument<sp/>is<sp/>`foo`</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>`-aboc<sp/>foo`:<sp/>`-o`&apos;s<sp/>argument<sp/>is<sp/>`c`,<sp/>`foo`<sp/>is<sp/>a<sp/>positional<sp/>argument</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>`-aobc<sp/>foo`:<sp/>`-o`&apos;s<sp/>argument<sp/>is<sp/>`bc`,<sp/>`foo`<sp/>is<sp/>a<sp/>positional<sp/>argument</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>`-oabc<sp/>foo`:<sp/>`-o`&apos;s<sp/>argument<sp/>is<sp/>`abc`,<sp/>`foo`<sp/>is<sp/>a<sp/>positional<sp/>argument</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">For<sp/>whitespace<sp/>delimited<sp/>arguments<sp/>the<sp/>greedy<sp/>processing<sp/>means<sp/>the<sp/>next<sp/>argument<sp/>element<sp/>(in<sp/>`argv`)<sp/>will<sp/>be<sp/>treated<sp/>as<sp/>an<sp/>argument<sp/>for<sp/>the<sp/>previous<sp/>option,<sp/>regardless<sp/>of<sp/>whether<sp/>or<sp/>not<sp/>it<sp/>looks<sp/>like<sp/>a<sp/>flag<sp/>or<sp/>some<sp/>other<sp/>special<sp/>entry.<sp/>That<sp/>means<sp/>you<sp/>get<sp/>behavior<sp/>like<sp/>below:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>`--output=foo<sp/>--<sp/>--bar`:<sp/>`--output`&apos;s<sp/>argument<sp/>is<sp/>`foo`,<sp/>`--bar`<sp/>is<sp/>a<sp/>positional<sp/>argument</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>`--output<sp/>--<sp/>--bar`:<sp/>`--output`&apos;s<sp/>argument<sp/>is<sp/>`--`,<sp/>`--bar`<sp/>is<sp/>treated<sp/>as<sp/>a<sp/>flag</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>`--output<sp/>--bar`:<sp/>`--output`&apos;s<sp/>argument<sp/>is<sp/>`--bar`</highlight></codeline>
+    </programlisting>
+    <location file="_deps/argagg-src/doc/root.md"/>
+  </compounddef>
+</doxygen>

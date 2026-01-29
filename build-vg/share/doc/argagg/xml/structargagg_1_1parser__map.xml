@@ -1,0 +1,187 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="structargagg_1_1parser__map" kind="struct" language="C++" prot="public">
+    <compoundname>argagg::parser_map</compoundname>
+    <includes refid="argagg_8hpp" local="no">argagg.hpp</includes>
+      <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structargagg_1_1parser__map_1af2ace0b7403a1302566719ea2b97baad" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/container/array" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::array</ref>&lt; const <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> *, 256 &gt;</type>
+        <definition>std::array&lt;const definition*, 256&gt; argagg::parser_map::short_map</definition>
+        <argsstring></argsstring>
+        <name>short_map</name>
+        <briefdescription>
+<para>Maps from a short flag (just a character) to a pointer to the original <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> that the flag represents. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="579" column="14" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="579" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structargagg_1_1parser__map_1a5ed8cd6a5e57925359d33e9472773d49" prot="public" static="no" mutable="no">
+        <type><ref refid="cpp/container/unordered_map" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::unordered_map</ref>&lt; <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref>, const <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> * &gt;</type>
+        <definition>std::unordered_map&lt;std::string, const definition*&gt; argagg::parser_map::long_map</definition>
+        <argsstring></argsstring>
+        <name>long_map</name>
+        <briefdescription>
+<para>Maps from a long flag (an <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref>) to a pointer to the original <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> that the flag represents. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="586" column="22" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="586" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="public-func">
+      <memberdef kind="function" id="structargagg_1_1parser__map_1a8701dda28757ea06a04fe1bed0a2eff6" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::parser_map::known_short_flag</definition>
+        <argsstring>(const char flag) const</argsstring>
+        <name>known_short_flag</name>
+        <param>
+          <type>const char</type>
+          <declname>flag</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if the provided short flag exists in the map object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="592" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1073" bodyend="1077"/>
+        <references refid="structargagg_1_1parser__map_1af2ace0b7403a1302566719ea2b97baad" compoundref="argagg_8hpp" startline="579">short_map</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__map_1aeb9d3cf8ea6009d010c18a6a57f7b738" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> *</type>
+        <definition>const definition * argagg::parser_map::get_definition_for_short_flag</definition>
+        <argsstring>(const char flag) const</argsstring>
+        <name>get_definition_for_short_flag</name>
+        <param>
+          <type>const char</type>
+          <declname>flag</declname>
+        </param>
+        <briefdescription>
+<para>If the short flag exists in the map object then it is returned by this method. If it doesn&apos;t then nullptr will be returned. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="600" column="20" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1081" bodyend="1085"/>
+        <references refid="structargagg_1_1parser__map_1af2ace0b7403a1302566719ea2b97baad" compoundref="argagg_8hpp" startline="579">short_map</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__map_1ae1b75fceb05c89091696c0bdc1e5bd91" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool argagg::parser_map::known_long_flag</definition>
+        <argsstring>(const std::string &amp;flag) const</argsstring>
+        <name>known_long_flag</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>flag</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if the provided long flag exists in the map object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="607" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1089" bodyend="1094"/>
+        <references refid="structargagg_1_1parser__map_1a5ed8cd6a5e57925359d33e9472773d49" compoundref="argagg_8hpp" startline="586">long_map</references>
+      </memberdef>
+      <memberdef kind="function" id="structargagg_1_1parser__map_1a1c933fca929439a558b6176b9b309b0b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> *</type>
+        <definition>const definition * argagg::parser_map::get_definition_for_long_flag</definition>
+        <argsstring>(const std::string &amp;flag) const</argsstring>
+        <name>get_definition_for_long_flag</name>
+        <param>
+          <type>const <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref> &amp;</type>
+          <declname>flag</declname>
+        </param>
+        <briefdescription>
+<para>If the long flag exists in the map object then it is returned by this method. If it doesn&apos;t then nullptr will be returned. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="615" column="20" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1098" bodyend="1106"/>
+        <references refid="structargagg_1_1parser__map_1a5ed8cd6a5e57925359d33e9472773d49" compoundref="argagg_8hpp" startline="586">long_map</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Contains two maps which aid in option parsing. The first map, <ref refid="structargagg_1_1parser__map_1af2ace0b7403a1302566719ea2b97baad" kindref="member">short_map</ref>, maps from a short flag (just a character) to a pointer to the original <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> that the flag represents. The second map, <ref refid="structargagg_1_1parser__map_1a5ed8cd6a5e57925359d33e9472773d49" kindref="member">long_map</ref>, maps from a long flag (an <ref refid="cpp/string/basic_string" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::string</ref>) to a pointer to the original <ref refid="structargagg_1_1definition" kindref="compound">definition</ref> that the flag represents. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This object is usually a temporary that only exists during the parsing operation. It is typically constructed using <ref refid="namespaceargagg_1a7a7eacb2cf495cc33c08df68619fbf95" kindref="member">validate_definitions()</ref>. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="7">
+        <label>std::array&lt; const argagg::definition *, 256 &gt;</label>
+        <link refid="cpp/container/array" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::unordered_map&lt; std::string, const argagg::definition * &gt;</label>
+        <link refid="cpp/container/unordered_map" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>elements</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>keys</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>argagg::definition</label>
+        <link refid="structargagg_1_1definition"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>help</edgelabel>
+          <edgelabel>name</edgelabel>
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>flags</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>argagg::parser_map</label>
+        <link refid="structargagg_1_1parser__map"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>long_map</edgelabel>
+        </childnode>
+        <childnode refid="7" relation="usage">
+          <edgelabel>short_map</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>std::basic_string&lt; char &gt;</label>
+        <link refid="cpp/string/basic_string" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+      </node>
+      <node id="6">
+        <label>std::vector&lt; std::string &gt;</label>
+        <link refid="cpp/container/vector" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>elements</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>std::string</label>
+        <link refid="cpp/string/basic_string" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml"/>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="572" column="1" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="572" bodyend="618"/>
+    <listofallmembers>
+      <member refid="structargagg_1_1parser__map_1a1c933fca929439a558b6176b9b309b0b" prot="public" virt="non-virtual"><scope>argagg::parser_map</scope><name>get_definition_for_long_flag</name></member>
+      <member refid="structargagg_1_1parser__map_1aeb9d3cf8ea6009d010c18a6a57f7b738" prot="public" virt="non-virtual"><scope>argagg::parser_map</scope><name>get_definition_for_short_flag</name></member>
+      <member refid="structargagg_1_1parser__map_1ae1b75fceb05c89091696c0bdc1e5bd91" prot="public" virt="non-virtual"><scope>argagg::parser_map</scope><name>known_long_flag</name></member>
+      <member refid="structargagg_1_1parser__map_1a8701dda28757ea06a04fe1bed0a2eff6" prot="public" virt="non-virtual"><scope>argagg::parser_map</scope><name>known_short_flag</name></member>
+      <member refid="structargagg_1_1parser__map_1a5ed8cd6a5e57925359d33e9472773d49" prot="public" virt="non-virtual"><scope>argagg::parser_map</scope><name>long_map</name></member>
+      <member refid="structargagg_1_1parser__map_1af2ace0b7403a1302566719ea2b97baad" prot="public" virt="non-virtual"><scope>argagg::parser_map</scope><name>short_map</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,193 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.1" xml:lang="en-US">
+  <compounddef id="namespaceargagg_1_1convert" kind="namespace" language="C++">
+    <compoundname>argagg::convert</compoundname>
+    <innerclass refid="structargagg_1_1convert_1_1converter" prot="public">argagg::convert::converter</innerclass>
+    <innerclass refid="structargagg_1_1convert_1_1converter_3_01csv_3_01T_01_4_01_4" prot="public">argagg::convert::converter&lt; csv&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="structargagg_1_1convert_1_1converter_3_01cv_1_1Point___3_01T_01_4_01_4" prot="public">argagg::convert::converter&lt; cv::Point_&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="structargagg_1_1convert_1_1converter_3_01cv_1_1Point3___3_01T_01_4_01_4" prot="public">argagg::convert::converter&lt; cv::Point3_&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="structargagg_1_1convert_1_1converter_3_01cv_1_1Size___3_01T_01_4_01_4" prot="public">argagg::convert::converter&lt; cv::Size_&lt; T &gt; &gt;</innerclass>
+    <innerclass refid="structargagg_1_1convert_1_1converter_3_01cv_1_1Rect___3_01T_01_4_01_4" prot="public">argagg::convert::converter&lt; cv::Rect_&lt; T &gt; &gt;</innerclass>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="namespaceargagg_1_1convert_1acbfa15a31486143d3c2032b4ac78fa96" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::convert::arg</definition>
+        <argsstring>(const char *arg)</argsstring>
+        <name>arg</name>
+        <param>
+          <type>const char *</type>
+          <declname>arg</declname>
+        </param>
+        <briefdescription>
+<para>Explicit instantiations of this function are used to convert arguments to types. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1487" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1487" bodyend="1490" declfile="_deps/argagg-src/include/argagg/argagg.hpp" declline="172" declcolumn="5"/>
+        <references refid="structargagg_1_1convert_1_1converter_1a9ae0fc72243699c930acdb3a12fcb550">argagg::convert::converter&lt; T &gt;::convert</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1_1convert_1a2624aa278ddbcde5062f46f3f7d51401" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>bool argagg::convert::parse_next_component</definition>
+        <argsstring>(const char *&amp;s, T &amp;out_arg, const char delim=&apos;,&apos;)</argsstring>
+        <name>parse_next_component</name>
+        <param>
+          <type>const char *&amp;</type>
+          <declname>s</declname>
+        </param>
+        <param>
+          <type>T &amp;</type>
+          <declname>out_arg</declname>
+        </param>
+        <param>
+          <type>const char</type>
+          <declname>delim</declname>
+          <defval>&apos;,&apos;</defval>
+        </param>
+        <briefdescription>
+<para>A utility function for parsing an argument as a delimited list. To use, initialize a const char* pointer to the start of argument string. Then call <ref refid="namespaceargagg_1_1convert_1a2624aa278ddbcde5062f46f3f7d51401" kindref="member">parse_next_component()</ref>, providing that pointer, a mutable reference to where the parsed argument will go, and optionally the delimiting character. The argument string will be read up to the next delimiting character and then converted using <computeroutput>argagg::convert::arg&lt;decltype(out_arg)&gt;()</computeroutput>. The pointer is then incremented accordingly. If the delimiting character is no longer found then false is returned meaning that parsing the list can be considered finished. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><programlisting><codeline><highlight class="normal">#include<sp/>&lt;argagg/argagg.hpp&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">struct<sp/>position3<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>double<sp/>x;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>double<sp/>y;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>double<sp/>z;</highlight></codeline>
+<codeline><highlight class="normal">};</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">namespace<sp/>argagg<sp/>{</highlight></codeline>
+<codeline><highlight class="normal">namespace<sp/>convert<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>template<sp/>&lt;&gt;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>position3<sp/>arg(const<sp/>char*<sp/>s)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>position3<sp/>result<sp/>{0.0,<sp/>0.0,<sp/>0.0};</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(!parse_next_component(s,<sp/>result.x))<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/>could<sp/>potentially<sp/>throw<sp/>an<sp/>error<sp/>if<sp/>you<sp/>require<sp/>that<sp/>at<sp/>least<sp/>two</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/>components<sp/>exist<sp/>in<sp/>the<sp/>list</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>result;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(!parse_next_component(s,<sp/>result.y))<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>result;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>(!parse_next_component(s,<sp/>result.z))<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>result;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>result;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal">}<sp/>//<sp/>namespace<sp/>convert</highlight></codeline>
+<codeline><highlight class="normal">}<sp/>//<sp/>namespace<sp/>argagg</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">int<sp/>main(int<sp/>argc,<sp/>char**<sp/>argv)</highlight></codeline>
+<codeline><highlight class="normal">{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>argagg::parser<sp/>argparser<sp/>{{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>{<sp/>&quot;origin&quot;,<sp/>{&quot;-o&quot;,<sp/>&quot;--origin&quot;},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;origin<sp/>as<sp/>position3<sp/>specified<sp/>as<sp/>a<sp/>comma<sp/>separated<sp/>list<sp/>of<sp/>&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;components<sp/>(e.g.<sp/>&apos;1,2,3&apos;)&quot;,<sp/>1},</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>}};</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>argagg::parser_results<sp/>args<sp/>=<sp/>argparser.parse(argc,<sp/>argv);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>auto<sp/>my_position<sp/>=<sp/>args[&quot;origin&quot;].as&lt;position3&gt;();</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>return<sp/>0;</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting> </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1551" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1551" bodyend="1568" declfile="_deps/argagg-src/include/argagg/argagg.hpp" declline="249" declcolumn="8"/>
+        <references refid="cpp/string/basic_string/c_str_1">std::string::c_str</references>
+        <references refid="cpp/string/byte/strchr_1">std::strchr</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1_1convert_1a102368079a90aef2388a0af87e84cfa6" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::convert::long_</definition>
+        <argsstring>(const char *arg)</argsstring>
+        <name>long_</name>
+        <param>
+          <type>const char *</type>
+          <declname>arg</declname>
+        </param>
+        <briefdescription>
+<para>Templated function for conversion to T using the <ref refid="cpp/string/byte/strtol" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::strtol()</ref> function. This is used for anything long length or shorter (long, int, short, char). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1412" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1412" bodyend="1426"/>
+        <references refid="namespaceargagg_1_1convert_1acbfa15a31486143d3c2032b4ac78fa96" compoundref="argagg_8hpp" startline="1487" endline="1490">arg</references>
+        <references refid="cpp/io/basic_ostringstream/str_1">std::ostringstream::str</references>
+        <references refid="cpp/string/byte/strtol_1">std::strtol</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1_1convert_1af02b6303e8a64b9f13ae8ac7365176ec" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>T</type>
+        <definition>T argagg::convert::long_long_</definition>
+        <argsstring>(const char *arg)</argsstring>
+        <name>long_long_</name>
+        <param>
+          <type>const char *</type>
+          <declname>arg</declname>
+        </param>
+        <briefdescription>
+<para>Templated function for conversion to T using the <ref refid="cpp/string/byte/strtol" kindref="compound" external="/home/cim/pgr/pmai286/blacksmith/build-vg/_deps/argagg-src/doc/cppreference-doxygen-web.tag.xml">std::strtoll()</ref> function. This is used for anything long long length or shorter (long long). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1436" column="5" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1436" bodyend="1450"/>
+        <references refid="namespaceargagg_1_1convert_1acbfa15a31486143d3c2032b4ac78fa96" compoundref="argagg_8hpp" startline="1487" endline="1490">arg</references>
+        <references refid="cpp/io/basic_ostringstream/str_1">std::ostringstream::str</references>
+        <references refid="cpp/string/byte/strtol_1">std::strtoll</references>
+      </memberdef>
+      <memberdef kind="function" id="namespaceargagg_1_1convert_1aa541be13778945d54dcfa232ca00c1cd" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+        </templateparamlist>
+        <type>bool</type>
+        <definition>std::string argagg::convert::arg</definition>
+        <argsstring>(const char *arg)</argsstring>
+        <name>arg</name>
+        <param>
+          <type>const char *</type>
+          <declname>arg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="1494" column="8" bodyfile="_deps/argagg-src/include/argagg/argagg.hpp" bodystart="1494" bodyend="1497"/>
+        <references refid="namespaceargagg_1_1convert_1acbfa15a31486143d3c2032b4ac78fa96" compoundref="argagg_8hpp" startline="1487" endline="1490">arg</references>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>The set of template instantiations that convert C-strings to other types for the <ref refid="structargagg_1_1option__result_1acad0ebe8b52f37b25c6955b406ff809f" kindref="member">option_result::as()</ref>, <ref refid="structargagg_1_1option__results_1a9a51160f3a6d84e162e5ec909a2ed44a" kindref="member">option_results::as()</ref>, <ref refid="structargagg_1_1parser__results_1aca0b15689e4ec5d296fe300d2a4705cc" kindref="member">parser_results::as()</ref>, and <ref refid="structargagg_1_1parser__results_1a3ff0ea89f6a10dc05a77f77a6d457b2c" kindref="member">parser_results::all_as()</ref> methods are placed in this namespace. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="_deps/argagg-src/include/argagg/argagg.hpp" line="164" column="1"/>
+  </compounddef>
+</doxygen>
