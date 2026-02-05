@@ -11,6 +11,9 @@
 #include <utility>
 #include <unordered_set>
 #include <unordered_map>
+#include <memory>
+#include <string>
+#include <vector>
 
 #ifdef ENABLE_JSON
 #include <nlohmann/json.hpp>
