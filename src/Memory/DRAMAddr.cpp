@@ -49,8 +49,12 @@ DRAMAddr::DRAMAddr(size_t bk, size_t r, size_t c) {
 DRAMAddr::DRAMAddr(void *addr) {
   // ==== Try real mapping via kernel module (virt -> phys -> DRAM) ====
   
-  const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
-  const long page_size     = ::getpagesize();
+  //const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
+  //const long page_size     = ::getpagesize();
+
+  this->virt = addr;
+  const std::uint64_t virt_u64 = reinterpret_cast<std::uint64_t>(addr);
+  const long page_size = ::getpagesize();
 
   bool          decoded   = false;
   std::uint64_t phys_addr = 0;
@@ -58,7 +62,7 @@ DRAMAddr::DRAMAddr(void *addr) {
   FILE *pm = std::fopen("/proc/self/pagemap", "rb");
   if (pm != nullptr) {
     const std::uint64_t index =
-        (virt / static_cast<std::uint64_t>(page_size)) * sizeof(std::uint64_t);
+        (virt_u64 / static_cast<std::uint64_t>(page_size)) * sizeof(std::uint64_t);
 
     if (std::fseek(pm, static_cast<long>(index), SEEK_SET) == 0) {
       std::uint64_t phys_entry = 0;
@@ -68,7 +72,7 @@ DRAMAddr::DRAMAddr(void *addr) {
           const std::uint64_t pfn = phys_entry & ((1ULL << 55) - 1);
           phys_addr =
               (pfn * static_cast<std::uint64_t>(page_size)) +
-              (virt & (static_cast<std::uint64_t>(page_size) - 1));
+              (virt_u64 & (static_cast<std::uint64_t>(page_size) - 1));
 
           std::cout << phys_addr << ":phys\n";
           if (auto t = decode_pa_with_kernel(phys_addr)) {
@@ -150,6 +154,13 @@ void *DRAMAddr::to_virt() const {
   }
   void *v_addr = (void *) (base_msb | res);
   return v_addr;
+}
+
+void *DRAMAddr::get_virt() const {
+  if (virt != nullptr) {
+    return virt;
+  }
+  return to_virt();
 }
 
 std::string DRAMAddr::to_string() {

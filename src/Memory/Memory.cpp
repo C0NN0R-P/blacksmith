@@ -240,6 +240,10 @@ volatile char *Memory::get_starting_address() const {
   return start_address;
 }
 
+uint64_t Memory::get_size() const {
+  return size;
+}
+
 std::string Memory::get_flipped_rows_text_repr() {
   // first extract all rows, otherwise it will not be possible to know in advance
   // whether we still need to add a separator (comma) to the string as upcoming

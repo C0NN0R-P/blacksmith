@@ -11,11 +11,12 @@
 #include <string>
 
 #include "Utilities/AsmPrimitives.hpp"
-#include "Fuzzer/PatternAddressMapper.hpp"
 
 enum class DATA_PATTERN : char {
   ZEROES, ONES, RANDOM
 };
+
+class PatternAddressMapper;
 
 class Memory {
  private:
@@ -53,6 +54,8 @@ class Memory {
   size_t check_memory(PatternAddressMapper &mapping, bool reproducibility_mode, bool verbose);
 
   [[nodiscard]] volatile char *get_starting_address() const;
+
+  [[nodiscard]] uint64_t get_size() const;
 
   std::string get_flipped_rows_text_repr();
 };

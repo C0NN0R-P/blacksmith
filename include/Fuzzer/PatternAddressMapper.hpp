@@ -10,6 +10,7 @@
 #include <set>
 #include <utility>
 #include <unordered_set>
+#include <unordered_map>
 
 #ifdef ENABLE_JSON
 #include <nlohmann/json.hpp>
@@ -21,6 +22,8 @@
 #include "Fuzzer/FuzzingParameterSet.hpp"
 #include "Fuzzer/CodeJitter.hpp"
 
+class Memory;
+
 class PatternAddressMapper {
  private:
   void export_pattern_internal(std::vector<Aggressor> &aggressors,
@@ -29,6 +32,10 @@ class PatternAddressMapper {
                                std::vector<int> &rows);
 
   std::unordered_set<volatile char *> victim_rows;
+
+  std::unordered_map<uint64_t, volatile char *> decoded_row_to_va;
+
+  std::unordered_map<uint64_t, std::vector<int>> decoded_bank_to_rows;
 
   // the unique identifier of this pattern-to-address mapping
   std::string instance_id;
@@ -72,6 +79,8 @@ class PatternAddressMapper {
   void randomize_addresses(FuzzingParameterSet &fuzzing_params,
                            const std::vector<AggressorAccessPattern> &agg_access_patterns,
                            bool verbose);
+
+  void randomize_addresses(Memory &memory, FuzzingParameterSet &fuzzing_params, const std::vector<AggressorAccessPattern> &agg_access_patterns, bool verbose);
 
   void remap_aggressors(DRAMAddr &new_location);
 

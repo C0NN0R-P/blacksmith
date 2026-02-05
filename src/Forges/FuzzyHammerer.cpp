@@ -277,7 +277,7 @@ void FuzzyHammerer::probe_mapping_and_scan(PatternAddressMapper &mapper, Memory 
   CodeJitter &code_jitter = mapper.get_code_jitter();
 
   // randomize the aggressor ID -> DRAM row mapping
-  mapper.randomize_addresses(fuzzing_params, hammering_pattern.agg_access_patterns, true);
+  mapper.randomize_addresses(memory, fuzzing_params, hammering_pattern.agg_access_patterns, true);
 
   // now fill the pattern with these random addresses
   std::vector<volatile char *> hammering_accesses_vec;

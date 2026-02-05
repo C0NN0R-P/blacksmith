@@ -1,9 +1,12 @@
+
 #include "Fuzzer/PatternAddressMapper.hpp"
 
 #include <algorithm>
 
 #include "GlobalDefines.hpp"
 #include "Utilities/Uuid.hpp"
+#include "Memory/DRAMAddr.hpp"
+#include "Memory/Memory.hpp"
 
 // initialize the bank_counter (static var)
 int PatternAddressMapper::bank_counter = 0;
@@ -141,10 +144,146 @@ void PatternAddressMapper::randomize_addresses(FuzzingParameterSet &fuzzing_para
     Logger::log_info(format_string("Found %d different aggressors (IDs) in pattern.", aggressor_to_addr.size()));
 }
 
+void PatternAddressMapper::randomize_addresses(Memory &memory, FuzzingParameterSet &fuzzing_params, const std::vector<AggressorAccessPattern> &agg_access_patterns, bool verbose) {
+  aggressor_to_addr.clear();
+  victim_rows.clear();
+  decoded_row_to_va.clear();
+  decoded_bank_to_rows.clear();
+
+  auto pack_bank = [](int chan, int rank, int bg, int bank) -> uint64_t {
+    return (uint64_t)(chan & 0xff) << 24 |
+           (uint64_t)(rank & 0xff) << 16 |
+           (uint64_t)(bg   & 0xff) << 8  |
+           (uint64_t)(bank & 0xff);
+  };
+
+  volatile char *base = memory.get_starting_address();
+  const uint64_t size = memory.get_size();
+  const size_t stride = (size_t)getpagesize();
+
+  // 1) Scan buffer, decode each page VA via kernel module
+  for (uint64_t off = 0; off + stride <= size; off += stride) {
+    volatile char *va = base + off;
+    DRAMAddr d((void *)va);
+
+    if (d.channel < 0 || d.rank < 0 || d.bank_group < 0) continue;
+
+    const int chan = d.channel;
+    const int rank = d.rank;
+    const int bg   = d.bank_group;
+    const int bank = (int)(d.bank & 0x3);       // because your code packs bank=(bg<<2)|bank
+    const uint32_t row = (uint32_t)d.row;
+
+    const uint64_t bk = pack_bank(chan, rank, bg, bank);
+    const uint64_t rk = (bk << 32) | (uint64_t)row;
+
+    if (decoded_row_to_va.find(rk) == decoded_row_to_va.end()) {
+      decoded_row_to_va[rk] = va;
+      decoded_bank_to_rows[bk].push_back((int)row);
+    }
+  }
+
+  for (auto &kv : decoded_bank_to_rows) {
+    auto &rows = kv.second;
+    std::sort(rows.begin(), rows.end());
+    rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+  }
+
+  if (decoded_bank_to_rows.empty()) {
+    Logger::log_error("[PatternAddressMapper] No decodable addresses found in Memory buffer.");
+    return;
+  }
+
+  if (verbose) {
+    Logger::log_info(format_string("[PatternAddressMapper] decoded banks=%zu decoded rows=%zu",
+                                   decoded_bank_to_rows.size(),
+                                   decoded_row_to_va.size()));
+  }
+
+  // 2) Choose aggressors from same (chan,rank,bg,bank) and adjacent rows
+  const int intra = fuzzing_params.get_agg_intra_distance(); // set to 1 for adjacent rows
+
+  std::vector<uint64_t> bank_keys;
+  bank_keys.reserve(decoded_bank_to_rows.size());
+  for (auto &kv : decoded_bank_to_rows) bank_keys.push_back(kv.first);
+
+  auto find_pair = [&](uint64_t bk, int &r0) -> bool {
+    auto &rows = decoded_bank_to_rows[bk];
+    for (int a : rows) {
+      int b = a + intra;
+      if (std::binary_search(rows.begin(), rows.end(), b)) { r0 = a; return true; }
+    }
+    return false;
+  };
+
+  for (auto &acc_pattern : agg_access_patterns) {
+    if (acc_pattern.aggressors.empty()) continue;
+
+    bool ok = false;
+
+    for (int tries = 0; tries < 500 && !ok; tries++) {
+      uint64_t bk = bank_keys[Range<size_t>(0, bank_keys.size() - 1).get_random_number(gen)];
+      int r0 = 0;
+      if (!find_pair(bk, r0)) continue;
+
+      ok = true;
+      for (size_t i = 0; i < acc_pattern.aggressors.size(); i++) {
+        const int rr = r0 + (int)i * intra;
+        const uint64_t rk = (bk << 32) | (uint32_t)rr;
+
+        auto it = decoded_row_to_va.find(rk);
+        if (it == decoded_row_to_va.end()) { ok = false; break; }
+
+        volatile char *va = it->second;
+        DRAMAddr d((void *)va);
+        aggressor_to_addr[acc_pattern.aggressors[i].id] = d;
+      }
+    }
+
+    if (!ok) {
+      Logger::log_error("[PatternAddressMapper] Failed to assign aggressors from decoded pool.");
+      return;
+    }
+  }
+
+  // 3) Victims: will be selected from decoded pool by determine_victims()
+  determine_victims(agg_access_patterns);
+}
+
 void PatternAddressMapper::determine_victims(const std::vector<AggressorAccessPattern> &agg_access_patterns) {
   // check ROW_THRESHOLD rows around the aggressors for flipped bits
   const int ROW_THRESHOLD = 5;
   // a set to make sure we add victims only once
+  if (!decoded_row_to_va.empty() && !decoded_bank_to_rows.empty()) {
+    auto pack_bank = [](int chan, int rank, int bg, int bank) -> uint64_t {
+      return (uint64_t)(chan & 0xff) << 24 |
+             (uint64_t)(rank & 0xff) << 16 |
+             (uint64_t)(bg   & 0xff) << 8  |
+             (uint64_t)(bank & 0xff);
+    };
+
+    for (auto &acc_pattern : agg_access_patterns) {
+      for (auto &agg : acc_pattern.aggressors) {
+        const auto &a = aggressor_to_addr.at(agg.id);
+
+        const int bank = (int)(a.bank & 0x3);
+        const uint64_t bk = pack_bank(a.channel, a.rank, a.bank_group, bank);
+
+        for (int d = -ROW_THRESHOLD; d <= ROW_THRESHOLD; ++d) {
+          if (d == 0) continue;
+          const int rr = (int)a.row + d;
+          if (rr < 0) continue;
+
+          const uint64_t rk = (bk << 32) | (uint32_t)rr;
+          auto it = decoded_row_to_va.find(rk);
+          if (it != decoded_row_to_va.end()) {
+            victim_rows.insert(it->second);
+          }
+        }
+      }
+    }
+    return;
+  }
   victim_rows.clear();
   for (auto &acc_pattern : agg_access_patterns) {
     for (auto &agg : acc_pattern.aggressors) {
@@ -202,7 +341,7 @@ void PatternAddressMapper::export_pattern_internal(
     }
 
     // retrieve virtual address of current aggressor in pattern and add it to output vector
-    addresses.push_back((volatile char *) aggressor_to_addr.at(agg.id).to_virt());
+    addresses.push_back((volatile char *) aggressor_to_addr.at(agg.id).get_virt());
     rows.push_back(static_cast<int>(aggressor_to_addr.at(agg.id).row));
     pattern_str << aggressor_to_addr.at(agg.id).row << " ";
   }
