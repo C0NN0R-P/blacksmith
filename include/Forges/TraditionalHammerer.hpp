@@ -6,6 +6,7 @@
 #ifndef BLACKSMITH_SRC_FORGES_TRADITIONALHAMMERER_HPP_
 #define BLACKSMITH_SRC_FORGES_TRADITIONALHAMMERER_HPP_
 
+#include <vector>
 #include "Memory/Memory.hpp"
 
 class TraditionalHammerer {

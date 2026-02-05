@@ -1,8 +1,18 @@
 #include "Forges/TraditionalHammerer.hpp"
 
+#include "Memory/DRAMAddr.hpp"
+#include "Utilities/Range.hpp"
 #include "Utilities/TimeHelper.hpp"
 #include "Blacksmith.hpp"
+
 #include <cinttypes>
+#include <limits>
+#include <random>
+#include <tuple>
+
+#ifdef ENABLE_JSON
+#include <nlohmann/json.hpp>
+#endif
 
 /// Performs hammering on given aggressor rows for HAMMER_ROUNDS times.
 void TraditionalHammerer::hammer(std::vector<volatile char *> &aggressors) {

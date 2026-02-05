@@ -1,6 +1,7 @@
 #include "Memory/Memory.hpp"
 #include "Memory/DRAMAddr.hpp"
 #include "GlobalDefines.hpp"
+#include "Fuzzer/PatternAddressMapper.hpp"
 
 #include <cassert>
 #include <cstdlib>

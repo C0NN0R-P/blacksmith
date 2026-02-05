@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <string>
 
+#include "Fuzzer/BitFlip.hpp"
 #include "Utilities/AsmPrimitives.hpp"
 
 enum class DATA_PATTERN : char {
