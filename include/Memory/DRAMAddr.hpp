@@ -53,6 +53,8 @@ class DRAMAddr {
   int rank = -1;
   int bank_group = -1;
 
+  void *virt = nullptr;
+  [[nodiscard]] void *get_virt() const;
   // class methods
   static void set_base_msb(void *buff);
 

@@ -48,6 +48,7 @@ DRAMAddr::DRAMAddr(size_t bk, size_t r, size_t c) {
 
 DRAMAddr::DRAMAddr(void *addr) {
   // ==== Try real mapping via kernel module (virt -> phys -> DRAM) ====
+  
   const std::uint64_t virt = reinterpret_cast<std::uint64_t>(addr);
   const long page_size     = ::getpagesize();
 
