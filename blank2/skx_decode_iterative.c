@@ -576,12 +576,14 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
                 (unsigned long long)SKX_RIR_OFFSET(way),
                 (unsigned long long)prev_limit);
 
+        uint64_t limit = SKX_RIR_LIMIT(way);
+
         if (!SKX_RIR_VALID(way)) {
             fprintf(stderr, "RIR: skip i=%d (invalid)\n", i);
+            prev_limit = limit + 1;
             continue;
         }
 
-        uint64_t limit = SKX_RIR_LIMIT(way);
 
         if (addr >= prev_limit && addr <= limit) {
             r->chanways = SKX_RIR_WAYS(way);
@@ -613,7 +615,7 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
             rule, r->chanways, idx);
 
     /* ILV table is 8 dwords per idx (32 bytes). scan all entries. */
-    uint32_t ilv_base = 0x120 + 32U * (uint32_t)idx;
+    uint32_t ilv_base = 0x120 + 32U * (uint32_t)(rule * 8 + idx);
 
     for (int w = 0; w < 8; w++) {
         uint32_t ilv = 0;
