@@ -7,351 +7,484 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <x86intrin.h>
 
-/* ------------------------- config ------------------------- */
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096ULL
+#endif
 
-#define DEFAULT_ALLOC_MB   256
-#define DEFAULT_N_ADDRS    1024
-#define DEFAULT_STEP       64       /* cache line */
-#define DEFAULT_ITERS      4000     /* inner loop per timing sample */
-#define DEFAULT_REPEATS    5        /* take median of repeats */
-#define DEFAULT_THRESH     1.25     /* alt/baseline ratio threshold */
-#define MAX_BANK_CLASSES   128
+/* ----------- small helpers (log/parse/pin) ----------- */
 
-static size_t g_pagesz;
-
-/* ------------------------- timing + flush ------------------------- */
-
-static inline void clflush(const void *p) {
-    asm volatile("clflush (%0)" :: "r"(p) : "memory");
+static void die(const char *fmt, ...) __attribute__((noreturn));
+static void die(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(1);
 }
 
-static inline uint64_t rdtsc_ordered(void) {
-    uint32_t lo, hi;
-    /* lfence before/after gives decent ordering on Intel */
-    asm volatile("lfence\n\t"
-                 "rdtsc\n\t"
-                 : "=a"(lo), "=d"(hi)
-                 :
-                 : "memory");
-    return ((uint64_t)hi << 32) | lo;
+static uint64_t parse_u64(const char *s)
+{
+    errno = 0;
+    char *end = NULL;
+    unsigned long long v = strtoull(s, &end, 0);
+    if (errno || !end || *end != '\0') die("bad integer: '%s'", s);
+    return (uint64_t)v;
 }
 
-static inline void cpu_relax(void) {
-    asm volatile("pause" ::: "memory");
-}
-
-/* pin to a CPU to reduce noise */
-static void pin_to_cpu0(void) {
+static void pin_to_cpu0(void)
+{
     cpu_set_t set;
     CPU_ZERO(&set);
     CPU_SET(0, &set);
-    (void)sched_setaffinity(0, sizeof(set), &set);
+    if (sched_setaffinity(0, sizeof(set), &set) != 0) {
+        /* Not fatal, but it helps a lot if it works. */
+        fprintf(stderr, "warn: sched_setaffinity failed: %s\n", strerror(errno));
+    }
 }
 
-/* ------------------------- VA -> PA via pagemap ------------------------- */
-
-static int va_to_pa(void *va, uint64_t *out_pa)
+static void try_raise_priority(void)
 {
-    uint64_t v = (uint64_t)(uintptr_t)va;
-    uint64_t vpn = v / g_pagesz;
-    uint64_t off = v % g_pagesz;
+    /* This is best-effort. */
+    if (setpriority(PRIO_PROCESS, 0, -10) != 0) {
+        /* Fine; many systems restrict negative nice without extra caps. */
+    }
+}
 
-    int fd = open("/proc/self/pagemap", O_RDONLY);
-    if (fd < 0) return -1;
+/* ----------- VA -> PA using /proc/self/pagemap ----------- */
+
+static int g_pagemap_fd = -1;
+
+/*
+ * Translate a userspace virtual address to a physical address.
+ * Returns true on success, false if the page isn't present or pagemap is blocked.
+ *
+ * Safety: this is read-only. It should not crash the machine.
+ */
+static bool va_to_pa(uint64_t va, uint64_t *pa_out)
+{
+    if (g_pagemap_fd < 0) {
+        g_pagemap_fd = open("/proc/self/pagemap", O_RDONLY);
+        if (g_pagemap_fd < 0) return false;
+    }
+
+    const uint64_t vpn = va / PAGE_SIZE;
+    const off_t off = (off_t)(vpn * 8ULL);
 
     uint64_t entry = 0;
-    off_t pos = (off_t)(vpn * sizeof(uint64_t));
-    if (lseek(fd, pos, SEEK_SET) == (off_t)-1) { close(fd); return -2; }
-    if (read(fd, &entry, sizeof(entry)) != (ssize_t)sizeof(entry)) { close(fd); return -3; }
-    close(fd);
+    ssize_t n = pread(g_pagemap_fd, &entry, sizeof(entry), off);
+    if (n != (ssize_t)sizeof(entry)) return false;
 
-    if ((entry & (1ULL << 63)) == 0) return -4; /* not present */
-    uint64_t pfn = entry & ((1ULL << 55) - 1);
-    if (!pfn) return -5;
+    /* Bit 63: present, bits 0-54 PFN (when present) on x86_64 */
+    const uint64_t present = (entry >> 63) & 1ULL;
+    if (!present) return false;
 
-    *out_pa = pfn * g_pagesz + off;
-    return 0;
+    const uint64_t pfn = entry & ((1ULL << 55) - 1ULL);
+    if (pfn == 0) return false;
+
+    *pa_out = (pfn * PAGE_SIZE) | (va & (PAGE_SIZE - 1ULL));
+    return true;
 }
 
-/* ------------------------- helpers ------------------------- */
+/* ----------- timing core ----------- */
 
-static int cmp_u64(const void *a, const void *b) {
-    uint64_t x = *(const uint64_t *)a;
-    uint64_t y = *(const uint64_t *)b;
-    if (x < y) return -1;
-    if (x > y) return 1;
-    return 0;
-}
-
-static uint64_t median_u64(uint64_t *arr, int n) {
-    qsort(arr, (size_t)n, sizeof(uint64_t), cmp_u64);
-    return arr[n/2];
-}
-
-/* ------------------------- DRAM contention tests ------------------------- */
 /*
-   We measure:
-     baseline(A): repeated forced-DRAM loads of A
-     alt(A,B): alternating forced-DRAM loads A,B,A,B,...
-
-   If A and B strongly contend (often same bank diff-row), alt time increases.
-*/
-
-static uint64_t time_baseline(volatile uint8_t *A, int iters)
+ * Serialised timestamp. RDTSCP is partially serialising; we also use fences.
+ * (In practice: good enough for this kind of relative comparison.)
+ */
+static inline uint64_t rdtscp_serial(void)
 {
-    uint64_t t0 = rdtsc_ordered();
-    for (int i = 0; i < iters; i++) {
-        clflush((const void *)A);
-        asm volatile("mfence" ::: "memory");
-        (void)*A;
-    }
-    uint64_t t1 = rdtsc_ordered();
+    unsigned aux;
+    uint64_t t = __rdtscp(&aux);
+    _mm_lfence();
+    return t;
+}
+
+/* Force a line out of caches. */
+static inline void flush_line(void *p)
+{
+    _mm_clflush(p);
+}
+
+/* Timed load from a volatile pointer so it can't be optimised away. */
+static inline uint64_t timed_load_cycles(volatile uint8_t *p)
+{
+    _mm_lfence();
+    uint64_t t0 = rdtscp_serial();
+    (void)*p;
+    uint64_t t1 = rdtscp_serial();
     return t1 - t0;
 }
 
-static uint64_t time_alternate(volatile uint8_t *A, volatile uint8_t *B, int iters)
+/*
+ * Measure baseline: A only. Each iteration flushes A then times a load of A.
+ * Returns average cycles per access (double).
+ */
+static double measure_baseline(volatile uint8_t *a, int iters)
 {
-    uint64_t t0 = rdtsc_ordered();
+    uint64_t sum = 0;
     for (int i = 0; i < iters; i++) {
-        clflush((const void *)A);
-        clflush((const void *)B);
-        asm volatile("mfence" ::: "memory");
-        (void)*A;
-        (void)*B;
+        flush_line((void*)a);
+        _mm_mfence();
+        sum += timed_load_cycles(a);
     }
-    uint64_t t1 = rdtsc_ordered();
-    return t1 - t0;
+    return (double)sum / (double)iters;
 }
 
-static double conflict_score(volatile uint8_t *A, volatile uint8_t *B, int iters, int repeats)
+/*
+ * Measure alternate: ABAB... We time only the A loads, but in the presence of B.
+ * Each step flushes the line it is about to touch so both are DRAM-ish.
+ */
+static double measure_alternate(volatile uint8_t *a, volatile uint8_t *b, int iters)
 {
-    /* score = median(alt) / median(baseline) */
-    uint64_t b[32], a[32];
-    if (repeats > 32) repeats = 32;
+    uint64_t sum_a = 0;
+    for (int i = 0; i < iters; i++) {
+        flush_line((void*)a);
+        flush_line((void*)b);
+        _mm_mfence();
+
+        /* Touch B first to disturb row-buffer state, then time A. */
+        (void)*b;
+        sum_a += timed_load_cycles(a);
+    }
+    return (double)sum_a / (double)iters;
+}
+
+/*
+ * Conflict score:
+ *   score = avg_A_cycles_with_B / avg_A_cycles_alone
+ *
+ * Typical interpretation:
+ *   - ~1.0  : no measurable interference
+ *   - 1.2+  : often "same bank / row-buffer conflict" (very platform/noise dependent)
+ *
+ * We average across 'repeats' independent measurements.
+ */
+static double conflict_score(volatile uint8_t *a,
+                             volatile uint8_t *b,
+                             int iters,
+                             int repeats)
+{
+    double base_sum = 0.0;
+    double alt_sum  = 0.0;
 
     for (int r = 0; r < repeats; r++) {
-        /* tiny relax to reduce back-to-back artefacts */
-        for (int k = 0; k < 50; k++) cpu_relax();
-        b[r] = time_baseline(A, iters);
-
-        for (int k = 0; k < 50; k++) cpu_relax();
-        a[r] = time_alternate(A, B, iters);
+        base_sum += measure_baseline(a, iters);
+        alt_sum  += measure_alternate(a, b, iters);
     }
 
-    uint64_t mb = median_u64(b, repeats);
-    uint64_t ma = median_u64(a, repeats);
+    double base = base_sum / (double)repeats;
+    double alt  = alt_sum  / (double)repeats;
 
-    if (mb == 0) return 0.0;
-    return (double)ma / (double)mb;
+    if (base < 1.0) base = 1.0; /* ultra-defensive; avoid divide-by-zero */
+    return alt / base;
 }
 
-/* ------------------------- main clustering ------------------------- */
+/* ----------- clustering ----------- */
 
 typedef struct {
-    void *va;
+    volatile uint8_t *va;
     uint64_t pa;
     int bank_class;
     double score_vs_rep;
-} AddrOut;
+} item_t;
 
 typedef struct {
-    volatile uint8_t *rep; /* representative VA */
+    int rep_index;     /* index into items[] */
     int count;
-} BankClass;
+} class_t;
+
+/*
+ * Greedy clustering:
+ *  - Start with class 0 using item 0 as rep
+ *  - For each new item i:
+ *      compute score vs each class rep
+ *      if max score >= threshold -> assign to that class
+ *      else -> start new class with i as rep
+ *
+ * This is cheap and "works soon" for demo/progress, but it's not perfect.
+ */
+static int cluster_items(item_t *items,
+                         int n_items,
+                         class_t *classes,
+                         int max_classes,
+                         int iters,
+                         int repeats,
+                         double threshold)
+{
+    int n_classes = 0;
+
+    if (n_items <= 0) return 0;
+
+    classes[0].rep_index = 0;
+    classes[0].count = 1;
+    items[0].bank_class = 0;
+    items[0].score_vs_rep = 1.0;
+    n_classes = 1;
+
+    for (int i = 1; i < n_items; i++) {
+        double best_score = 0.0;
+        int best_class = -1;
+
+        for (int c = 0; c < n_classes; c++) {
+            int rep = classes[c].rep_index;
+            double s = conflict_score(items[rep].va, items[i].va, iters, repeats);
+            if (s > best_score) {
+                best_score = s;
+                best_class = c;
+            }
+        }
+
+        if (best_class >= 0 && best_score >= threshold) {
+            items[i].bank_class = best_class;
+            items[i].score_vs_rep = best_score;
+            classes[best_class].count++;
+        } else {
+            if (n_classes >= max_classes) {
+                /* If we hit the cap, dump into the "last" class to keep running. */
+                items[i].bank_class = n_classes - 1;
+                items[i].score_vs_rep = best_score;
+                classes[n_classes - 1].count++;
+            } else {
+                items[i].bank_class = n_classes;
+                items[i].score_vs_rep = 1.0;
+                classes[n_classes].rep_index = i;
+                classes[n_classes].count = 1;
+                n_classes++;
+            }
+        }
+    }
+
+    return n_classes;
+}
+
+/* ----------- output (CSV/JSON) ----------- */
+
+static void write_csv(FILE *f, const item_t *items, int n_items)
+{
+    fprintf(f, "va,pa,bank_class,score_vs_rep\n");
+    for (int i = 0; i < n_items; i++) {
+        fprintf(f, "0x%016" PRIx64 ",0x%016" PRIx64 ",%d,%.3f\n",
+                (uint64_t)(uintptr_t)items[i].va,
+                items[i].pa,
+                items[i].bank_class,
+                items[i].score_vs_rep);
+    }
+}
+
+/* Minimal JSON string escaping for our limited needs. */
+static void json_put_escaped(FILE *f, const char *s)
+{
+    for (; *s; s++) {
+        unsigned char c = (unsigned char)*s;
+        if (c == '\\' || c == '"') {
+            fputc('\\', f);
+            fputc(c, f);
+        } else if (c >= 0x20) {
+            fputc(c, f);
+        } else {
+            /* Control chars -> \u00XX */
+            fprintf(f, "\\u%04x", (unsigned)c);
+        }
+    }
+}
+
+static void write_json(FILE *f,
+                       const item_t *items,
+                       int n_items,
+                       int n_classes,
+                       double threshold,
+                       int iters,
+                       int repeats,
+                       uint64_t alloc_bytes,
+                       uint64_t stride_bytes)
+{
+    fprintf(f, "{\n");
+    fprintf(f, "  \"meta\": {\n");
+    fprintf(f, "    \"n_items\": %d,\n", n_items);
+    fprintf(f, "    \"n_classes\": %d,\n", n_classes);
+    fprintf(f, "    \"threshold\": %.6f,\n", threshold);
+    fprintf(f, "    \"iters\": %d,\n", iters);
+    fprintf(f, "    \"repeats\": %d,\n", repeats);
+    fprintf(f, "    \"alloc_bytes\": %" PRIu64 ",\n", alloc_bytes);
+    fprintf(f, "    \"stride_bytes\": %" PRIu64 "\n", stride_bytes);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"items\": [\n");
+    for (int i = 0; i < n_items; i++) {
+        fprintf(f, "    {\"va\":\"0x%016" PRIx64 "\",\"pa\":\"0x%016" PRIx64 "\",\"bank_class\":%d,\"score_vs_rep\":%.6f}%s\n",
+                (uint64_t)(uintptr_t)items[i].va,
+                items[i].pa,
+                items[i].bank_class,
+                items[i].score_vs_rep,
+                (i == n_items - 1) ? "" : ",");
+    }
+    fprintf(f, "  ]\n");
+    fprintf(f, "}\n");
+}
+
+/* ----------- main ----------- */
 
 static void usage(const char *argv0)
 {
     fprintf(stderr,
-        "Usage:\n"
-        "  %s [--alloc-mb N] [--n NADDR] [--step BYTES] [--iters N] [--repeats N]\n"
-        "     [--thresh RATIO] [--max-classes N] [--csv]\n"
+        "usage: %s [options]\n"
         "\n"
-        "Output:\n"
-        "  Prints VA, PA, bank_class, score_vs_rep (CSV if --csv)\n"
+        "options:\n"
+        "  --n N              number of candidate addresses (default 1024)\n"
+        "  --alloc-mb MB      allocation size in MB (default 256)\n"
+        "  --stride BYTES     stride between candidates (default 4096)\n"
+        "  --iters I          timing iterations per measurement (default 4000)\n"
+        "  --repeats R        measurement repeats (default 5)\n"
+        "  --thresh T         conflict threshold (default 1.25)\n"
+        "  --max-classes K    cap number of classes (default 64)\n"
+        "  --csv PATH         write CSV to PATH\n"
+        "  --json PATH        write JSON to PATH\n"
+        "  --no-pin           don't pin to CPU0\n"
         "\n"
-        "Notes:\n"
-        "  - 'bank_class' is a probabilistic grouping based on DRAM contention.\n"
-        "  - Requires pagemap access (often needs sudo / CAP_SYS_ADMIN depending on kernel).\n",
-        argv0);
+        "notes:\n"
+        "  - VA->PA uses /proc/self/pagemap, which is typically restricted.\n"
+        "    If VA->PA fails, we still output VA but PA will be 0.\n"
+        , argv0);
 }
 
 int main(int argc, char **argv)
 {
-    pin_to_cpu0();
-    g_pagesz = (size_t)getpagesize();
-
-    size_t alloc_mb = DEFAULT_ALLOC_MB;
-    size_t want_n = DEFAULT_N_ADDRS;
-    size_t step = DEFAULT_STEP;
-    int iters = DEFAULT_ITERS;
-    int repeats = DEFAULT_REPEATS;
-    double thresh = DEFAULT_THRESH;
-    int max_classes = MAX_BANK_CLASSES;
-    bool csv = false;
+    int n = 1024;
+    uint64_t alloc_mb = 256;
+    uint64_t stride = PAGE_SIZE;
+    int iters = 4000;
+    int repeats = 5;
+    double thresh = 1.25;
+    int max_classes = 64;
+    const char *csv_path = NULL;
+    const char *json_path = NULL;
+    bool do_pin = true;
 
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "--alloc-mb") && i + 1 < argc) {
-            alloc_mb = (size_t)strtoull(argv[++i], NULL, 10);
-        } else if (!strcmp(argv[i], "--n") && i + 1 < argc) {
-            want_n = (size_t)strtoull(argv[++i], NULL, 10);
-        } else if (!strcmp(argv[i], "--step") && i + 1 < argc) {
-            step = (size_t)strtoull(argv[++i], NULL, 10);
-            if (step == 0) step = 64;
+        if (!strcmp(argv[i], "--n") && i + 1 < argc) {
+            n = (int)parse_u64(argv[++i]);
+        } else if (!strcmp(argv[i], "--alloc-mb") && i + 1 < argc) {
+            alloc_mb = parse_u64(argv[++i]);
+        } else if (!strcmp(argv[i], "--stride") && i + 1 < argc) {
+            stride = parse_u64(argv[++i]);
         } else if (!strcmp(argv[i], "--iters") && i + 1 < argc) {
-            iters = (int)strtol(argv[++i], NULL, 10);
+            iters = (int)parse_u64(argv[++i]);
         } else if (!strcmp(argv[i], "--repeats") && i + 1 < argc) {
-            repeats = (int)strtol(argv[++i], NULL, 10);
+            repeats = (int)parse_u64(argv[++i]);
         } else if (!strcmp(argv[i], "--thresh") && i + 1 < argc) {
             thresh = strtod(argv[++i], NULL);
         } else if (!strcmp(argv[i], "--max-classes") && i + 1 < argc) {
-            max_classes = (int)strtol(argv[++i], NULL, 10);
-            if (max_classes < 1) max_classes = 1;
-            if (max_classes > MAX_BANK_CLASSES) max_classes = MAX_BANK_CLASSES;
-        } else if (!strcmp(argv[i], "--csv")) {
-            csv = true;
+            max_classes = (int)parse_u64(argv[++i]);
+        } else if (!strcmp(argv[i], "--csv") && i + 1 < argc) {
+            csv_path = argv[++i];
+        } else if (!strcmp(argv[i], "--json") && i + 1 < argc) {
+            json_path = argv[++i];
+        } else if (!strcmp(argv[i], "--no-pin")) {
+            do_pin = false;
+        } else if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
+            usage(argv[0]);
+            return 0;
         } else {
             usage(argv[0]);
-            return 1;
+            die("unknown/invalid option: %s", argv[i]);
         }
     }
 
-    size_t bytes = alloc_mb * 1024ULL * 1024ULL;
-    uint8_t *buf = mmap(NULL, bytes, PROT_READ | PROT_WRITE,
+    if (n <= 0) die("--n must be > 0");
+    if (stride == 0) die("--stride must be > 0");
+
+    if (do_pin) pin_to_cpu0();
+    try_raise_priority();
+
+    uint64_t alloc_bytes = alloc_mb * 1024ULL * 1024ULL;
+
+    /* mmap anonymous memory; page-aligned by definition */
+    uint8_t *buf = mmap(NULL, alloc_bytes, PROT_READ | PROT_WRITE,
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (buf == MAP_FAILED) {
-        fprintf(stderr, "mmap failed: %s\n", strerror(errno));
-        return 1;
+    if (buf == MAP_FAILED) die("mmap failed: %s", strerror(errno));
+
+    /* Touch each page so it's faulted in before we start translating/timing. */
+    for (uint64_t off = 0; off < alloc_bytes; off += PAGE_SIZE) {
+        buf[off] = (uint8_t)(off ^ 0xA5);
     }
 
-    /* fault in pages so pagemap entries exist */
-    for (size_t off = 0; off < bytes; off += g_pagesz) {
-        buf[off] = (uint8_t)(off & 0xff);
-    }
+    item_t *items = calloc((size_t)n, sizeof(*items));
+    if (!items) die("calloc items failed");
 
-    size_t n_slots = bytes / step;
-    if (n_slots < want_n) {
-        fprintf(stderr, "allocation too small for requested n (slots=%zu want=%zu)\n", n_slots, want_n);
-        munmap(buf, bytes);
-        return 1;
-    }
+    /* Enumerate candidates. We keep them within the allocated region. */
+    uint64_t max_off = alloc_bytes - 64; /* keep some slack */
+    uint64_t off = 0;
 
-    /* pick addresses by simple stride sampling (deterministic, quick) */
-    AddrOut *out = calloc(want_n, sizeof(*out));
-    if (!out) {
-        fprintf(stderr, "calloc out failed\n");
-        munmap(buf, bytes);
-        return 1;
-    }
+    for (int i = 0; i < n; i++) {
+        uint64_t this_off = off;
+        if (this_off > max_off) {
+            /* Wrap if user asked for more items than fit in alloc/stride. */
+            this_off = (uint64_t)(i % (int)(max_off / stride + 1)) * stride;
+        }
 
-    size_t got = 0;
-    for (size_t idx = 0; idx < n_slots && got < want_n; idx += (4096 / step)) {
-        uint8_t *va = buf + idx * step;
-        *(volatile uint8_t *)va ^= 1;
+        volatile uint8_t *va = (volatile uint8_t *)(buf + this_off);
+        items[i].va = va;
 
         uint64_t pa = 0;
-        if (va_to_pa(va, &pa) != 0) continue;
+        if (!va_to_pa((uint64_t)(uintptr_t)va, &pa)) {
+            /* Not fatal; we just mark PA unknown. */
+            pa = 0;
+        }
+        items[i].pa = pa;
 
-        out[got].va = va;
-        out[got].pa = pa;
-        got++;
+        items[i].bank_class = -1;
+        items[i].score_vs_rep = 0.0;
+
+        off += stride;
     }
 
-    if (got < want_n) {
-        /* fallback: fill remaining linearly */
-        for (size_t idx = 0; idx < n_slots && got < want_n; idx++) {
-            uint8_t *va = buf + idx * step;
-            *(volatile uint8_t *)va ^= 1;
+    class_t *classes = calloc((size_t)max_classes, sizeof(*classes));
+    if (!classes) die("calloc classes failed");
 
-            uint64_t pa = 0;
-            if (va_to_pa(va, &pa) != 0) continue;
+    int n_classes = cluster_items(items, n, classes, max_classes, iters, repeats, thresh);
 
-            out[got].va = va;
-            out[got].pa = pa;
-            got++;
-        }
+    /* Default: CSV to stdout if the user didn't ask for files. */
+    bool wrote_any = false;
+
+    if (csv_path) {
+        FILE *f = fopen(csv_path, "w");
+        if (!f) die("failed to open csv: %s", strerror(errno));
+        write_csv(f, items, n);
+        fclose(f);
+        wrote_any = true;
     }
 
-    if (got < want_n) {
-        fprintf(stderr, "only gathered %zu/%zu addresses (pagemap restrictions?)\n", got, want_n);
-        free(out);
-        munmap(buf, bytes);
-        return 2;
+    if (json_path) {
+        FILE *f = fopen(json_path, "w");
+        if (!f) die("failed to open json: %s", strerror(errno));
+        write_json(f, items, n, n_classes, thresh, iters, repeats, alloc_bytes, stride);
+        fclose(f);
+        wrote_any = true;
     }
 
-    /* clustering */
-    BankClass classes[MAX_BANK_CLASSES];
-    memset(classes, 0, sizeof(classes));
-    int n_classes = 0;
-
-    /* seed first class with first address */
-    classes[0].rep = (volatile uint8_t *)out[0].va;
-    classes[0].count = 1;
-    out[0].bank_class = 0;
-    out[0].score_vs_rep = 1.0;
-    n_classes = 1;
-
-    for (size_t i = 1; i < want_n; i++) {
-        volatile uint8_t *A = (volatile uint8_t *)out[i].va;
-
-        int best_c = -1;
-        double best_score = 0.0;
-
-        /* compare against each class rep */
-        for (int c = 0; c < n_classes; c++) {
-            volatile uint8_t *R = classes[c].rep;
-            double s = conflict_score(R, A, iters, repeats);
-
-            if (s > best_score) {
-                best_score = s;
-                best_c = c;
-            }
-        }
-
-        if (best_c >= 0 && best_score >= thresh) {
-            out[i].bank_class = best_c;
-            out[i].score_vs_rep = best_score;
-            classes[best_c].count++;
-        } else {
-            /* new class if we have room */
-            if (n_classes < max_classes) {
-                int cnew = n_classes++;
-                classes[cnew].rep = A;
-                classes[cnew].count = 1;
-                out[i].bank_class = cnew;
-                out[i].score_vs_rep = best_score;
-            } else {
-                /* forced assignment to best match */
-                out[i].bank_class = (best_c >= 0) ? best_c : 0;
-                out[i].score_vs_rep = best_score;
-                classes[out[i].bank_class].count++;
-            }
-        }
-    }
-
-    /* output */
-    if (csv) {
-        printf("va,pa,bank_class,score_vs_rep\n");
-        for (size_t i = 0; i < want_n; i++) {
-            printf("%p,0x%016" PRIx64 ",%d,%.3f\n",
-                   out[i].va, out[i].pa, out[i].bank_class, out[i].score_vs_rep);
-        }
-    } else {
-        for (size_t i = 0; i < want_n; i++) {
-            printf("VA=%p PA=0x%016" PRIx64 " bank_class=%d score=%.3f\n",
-                   out[i].va, out[i].pa, out[i].bank_class, out[i].score_vs_rep);
-        }
+    if (!wrote_any) {
+        write_csv(stdout, items, n);
     }
 
     fprintf(stderr, "classes=%d (thresh=%.2f iters=%d repeats=%d)\n",
             n_classes, thresh, iters, repeats);
 
-    free(out);
-    munmap(buf, bytes);
+    /* cleanup */
+    if (g_pagemap_fd >= 0) close(g_pagemap_fd);
+    munmap((void*)buf, alloc_bytes);
+    free(items);
+    free(classes);
     return 0;
 }
