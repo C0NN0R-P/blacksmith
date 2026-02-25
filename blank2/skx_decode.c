@@ -231,12 +231,7 @@ typedef struct {
     int bank_group;
 } DecodedAddr;
 
-/* ---- verbosity + Option B channel usability ---- */
-
-static bool g_verbose = false;
-static bool g_chan_usable[2][2][3];
-
-/* ---- register access macros ---- */
+/* ---- register access macros from skx_base.c ---- */
 
 #define SKX_GET_SAD(s, i, reg) \
     pci_read_u32((s)->sad_all, 0x60 + 8 * (i), &(reg))
@@ -244,8 +239,13 @@ static bool g_chan_usable[2][2][3];
 #define SKX_GET_ILV(s, i, reg) \
     pci_read_u32((s)->sad_all, 0x64 + 8 * (i), &(reg))
 
+/* NOTE: base/limit/wayness register layout varies; we use explicit offsets in TAD decode. */
+
 #define SKX_GET_RIRWAYNESS(s, mc, ch, i, reg) \
     pci_read_u32((s)->imc[(mc)].chan[(ch)].cdev, 0x108 + 4 * (i), &(reg))
+
+#define SKX_GET_RIRILV(s, mc, ch, idx, i, reg) \
+    pci_read_u32((s)->imc[(mc)].chan[(ch)].cdev, 0x120 + 16 * (idx) + 4 * (i), &(reg))
 
 #define SKX_SAD_MOD3MODE(sad)      GET_BITFIELD((sad), 30, 31)
 #define SKX_SAD_MOD3(sad)          GET_BITFIELD((sad), 27, 27)
@@ -302,6 +302,11 @@ static inline int skx_bank_bits(uint64_t v, int b0, int b1, bool xor_en, int x0,
     return (r1 << 1) | r0;
 }
 
+/* ---- globals: verbosity + channel usability ---- */
+
+static bool g_verbose = false;
+static bool g_chan_usable[2][2][3];
+
 /* ---- DIMM config extraction ---- */
 
 static int skx_init_dimms_for_socket(SkxSocket *s)
@@ -321,9 +326,11 @@ static int skx_init_dimms_for_socket(SkxSocket *s)
 
                 SkxDimm *dd = &s->imc[mc].chan[ch].dimms[d];
 
+                /* treat bit31 as advisory; geometry bits are what MAD needs */
                 int rows = (int)GET_BITFIELD(mtr, 2, 4) + 12;
                 int cols = (int)GET_BITFIELD(mtr, 0, 1) + 10;
 
+                /* reject obvious garbage */
                 if (rows < 12 || rows > 20 || cols < 10 || cols > 12) {
                      memset(dd, 0, sizeof(*dd));
                      continue;
@@ -340,14 +347,11 @@ static int skx_init_dimms_for_socket(SkxSocket *s)
     return 0;
 }
 
-/* ---- decode helpers ---- */
+/* ---- SAD/TAD/RIR/MAD decode ---- */
 
 static uint64_t g_tolm = 0;
 static uint64_t g_tohm = 0;
 
-/* Bit-preserving de-interleave at 64B granularity:
- * Keeps low 6 bits (within cacheline), collapses the higher bits by 'ways'.
- * This avoids the "chan_addr == PA" failure mode and matches how RIR limits are defined. */
 static inline uint64_t deinterleave_64B(uint64_t v, int ways)
 {
     if (ways <= 1) return v;
@@ -360,6 +364,7 @@ static inline uint64_t deinterleave_64B(uint64_t v, int ways)
 
 static int find_socket_by_target(SkxSocket socks[2], int tgt)
 {
+    /* kernel code compares src_id; here we treat tgt 0/1 as socket index */
     if (tgt == 0) return 0;
     if (tgt == 1) return 1;
     return -1;
@@ -431,6 +436,7 @@ sad_found:
         lchan = (lchan << 1) | (SKX_ILV_TARGET(tgt) & 1);
     }
 
+    /* lchan is socket-local channel index (0..5) */
     res->socket  = s->socket;
     res->imc     = lchan / 3;
     res->channel = lchan % 3;
@@ -438,22 +444,28 @@ sad_found:
     return true;
 }
 
-/* ---- TAD decode (fixed chan_addr) ---- */
-
+/* Fixed TAD decode:
+ * - Use base at 0x850+4*i (as per original macros)
+ * - Use limit at 0x870+4*i (this is the missing piece in your earlier iteration)
+ * - Use wayness at 0x880+4*i
+ * - Compute chan_addr via bit-preserving de-interleave instead of leaving it ~PA
+ */
 static bool skx_tad_decode(SkxSocket socks[2], DecodedAddr *r)
 {
     SkxSocket *s = &socks[r->socket];
     uint64_t addr = r->addr;
 
+    PciDev *mcdev_ch0 = s->imc[r->imc].chan[0].cdev;
+    PciDev *chdev     = s->imc[r->imc].chan[r->channel].cdev;
+
     for (int i = 0; i < SKX_MAX_TAD; i++) {
         uint32_t base_reg = 0, lim_reg = 0, way_reg = 0, off_reg = 0;
 
-        /* base/limit are 8-byte entries: base at +8*i, limit at +8*i+4 */
-        if (pci_read_u32(s->imc[r->imc].chan[0].cdev, 0x850 + 8*i,     &base_reg) != 0) return false;
-        if (pci_read_u32(s->imc[r->imc].chan[0].cdev, 0x850 + 8*i + 4, &lim_reg)  != 0) return false;
-
-        if (pci_read_u32(s->imc[r->imc].chan[0].cdev, 0x880 + 4*i, &way_reg) != 0) return false;
-        if (pci_read_u32(s->imc[r->imc].chan[r->channel].cdev, 0x90 + 4*i, &off_reg) != 0) return false;
+        /* base/limit are a 64-bit pair: base at 0x850+8*i, limit at 0x850+8*i+4 */
+        if (pci_read_u32(mcdev_ch0, 0x850 + 8*i,     &base_reg) != 0) return false;
+        if (pci_read_u32(mcdev_ch0, 0x850 + 8*i + 4, &lim_reg)  != 0) return false;
+        if (pci_read_u32(mcdev_ch0, 0x880 + 4*i, &way_reg)  != 0) return false;
+        if (pci_read_u32(chdev,     0x90  + 4*i, &off_reg)  != 0) return false;
 
         uint64_t base  = SKX_TAD_BASE(base_reg);
         uint64_t limit = SKX_TAD_LIMIT(lim_reg);
@@ -463,42 +475,32 @@ static bool skx_tad_decode(SkxSocket socks[2], DecodedAddr *r)
         r->sktways  = SKX_TAD_SKTWAYS(way_reg);
         r->chanways = SKX_TAD_CHNWAYS(way_reg);
 
-        /* Option B: reject weird configs we do not model (keeps failure rate low) */
+        /* reject weird configs we do not handle */
         if (!(r->sktways == 1 || r->sktways == 2 || r->sktways == 4 || r->sktways == 8)) {
-            if (g_verbose) {
-                fprintf(stderr, "TAD_REJECT: unsupported sktways=%d (i=%d way_reg=0x%08x)\n",
-                        r->sktways, i, way_reg);
-            }
+            if (g_verbose) fprintf(stderr, "TAD_REJECT: sktways=%d (i=%d way_reg=0x%08x)\n", r->sktways, i, way_reg);
             return false;
         }
         if (!(r->chanways >= 1 && r->chanways <= 8)) {
-            if (g_verbose) {
-                fprintf(stderr, "TAD_REJECT: unsupported chanways=%d (i=%d way_reg=0x%08x)\n",
-                        r->chanways, i, way_reg);
-            }
+            if (g_verbose) fprintf(stderr, "TAD_REJECT: chanways=%d (i=%d way_reg=0x%08x)\n", r->chanways, i, way_reg);
             return false;
         }
 
-        /* IMPORTANT: compute channel-local address for RIR.
-         * Use bit-preserving de-interleave at 64B granularity rather than (addr /= ways).
-         */
         uint64_t tmp = addr - base;
 
-        /* remove socket interleave contribution */
+        /* De-interleave in the order socket then channel. */
         tmp = deinterleave_64B(tmp, r->sktways);
-
-        /* remove channel interleave contribution */
         tmp = deinterleave_64B(tmp, r->chanways);
 
-        /* apply channel offset */
         r->chan_addr = tmp + SKX_TAD_OFFSET(off_reg);
 
         if (g_verbose) {
             fprintf(stderr,
-                    "TAD_OK: i=%d base=0x%llx limit=0x%llx way_reg=0x%08x off_reg=0x%08x sktways=%d chanways=%d -> chan_addr=0x%llx\n",
+                    "TAD_OK: i=%d base=0x%llx limit=0x%llx base_reg=0x%08x lim_reg=0x%08x way_reg=0x%08x off_reg=0x%08x sktways=%d chanways=%d -> chan_addr=0x%llx\n",
                     i,
                     (unsigned long long)base,
                     (unsigned long long)limit,
+                    base_reg,
+                    lim_reg,
                     way_reg,
                     off_reg,
                     r->sktways,
@@ -511,8 +513,6 @@ static bool skx_tad_decode(SkxSocket socks[2], DecodedAddr *r)
 
     return false;
 }
-
-/* ---- RIR debug dump (verbose only) ---- */
 
 static void dump_rir_regs(SkxSocket socks[2], int sock, int imc, int chan)
 {
@@ -534,25 +534,23 @@ static void dump_rir_regs(SkxSocket socks[2], int sock, int imc, int chan)
                 (unsigned long long)SKX_RIR_OFFSET(way));
     }
 
-    /* ILV tables: dump a sensible amount */
-    for (int ridx = 0; ridx < SKX_MAX_RIR; ridx++) {
-        for (int idx = 0; idx < 8; idx++) {
-            fprintf(stderr, "  ilv[rule=%d idx=%d]:", ridx, idx);
-            for (int w = 0; w < 8; w++) {
-                uint32_t ilv = 0;
-                pci_read_u32(dev, 0x120 + 32*(ridx*8+idx) + 4*w, &ilv);
-                fprintf(stderr, " %08x", ilv);
-            }
-            fprintf(stderr, "\n");
+    /* ILV tables: dump first few dwords so we see structure */
+    for (int idx = 0; idx < 8; idx++) {
+        fprintf(stderr, "  ilv_idx=%d:", idx);
+        for (int w = 0; w < 8; w++) {
+            uint32_t ilv = 0;
+            pci_read_u32(dev, 0x120 + 32*idx + 4*w, &ilv);
+            fprintf(stderr, " %08x", ilv);
         }
+        fprintf(stderr, "\n");
     }
 }
 
-/* ---- RIR decode ---- */
-
 static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
 {
-    /* Option B: no unconditional dumps; only verbose */
+    /* RIR = Rank Interleave Rules. This stage maps a channel address to a channel-rank
+     * and produces a rank-relative address (rank_address) used by MAD decode. */
+
     if (g_verbose) dump_rir_regs(socks, r->socket, r->imc, r->channel);
 
     SkxSocket *s = &socks[r->socket];
@@ -560,6 +558,7 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
 
     uint32_t way = 0;
     uint64_t prev_limit = 0;
+
     int rule = -1;
 
     if (g_verbose) {
@@ -574,20 +573,22 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
             return false;
         }
 
-        uint64_t limit = SKX_RIR_LIMIT(way);
-
         if (g_verbose) {
-            fprintf(stderr,
-                    "RIR: wayness[%d]=0x%08x valid=%u ways=%u limit=0x%llx prev_limit=0x%llx\n",
+            fprintf(stderr, "RIR: wayness[%d]=0x%08x valid=%u ways=%u limit=0x%llx chan_rank=%u off=0x%llx prev_limit=0x%llx\n",
                     i,
                     way,
                     (unsigned)SKX_RIR_VALID(way),
                     (unsigned)SKX_RIR_WAYS(way),
-                    (unsigned long long)limit,
+                    (unsigned long long)SKX_RIR_LIMIT(way),
+                    (unsigned)SKX_RIR_CHAN_RANK(way),
+                    (unsigned long long)SKX_RIR_OFFSET(way),
                     (unsigned long long)prev_limit);
         }
 
+        uint64_t limit = SKX_RIR_LIMIT(way);
+
         if (!SKX_RIR_VALID(way)) {
+            if (g_verbose) fprintf(stderr, "RIR: skip i=%d (invalid)\n", i);
             prev_limit = limit + 1;
             continue;
         }
@@ -605,6 +606,13 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
             break;
         }
 
+        if (g_verbose) {
+            fprintf(stderr, "RIR: addr not in range for i=%d (range [0x%llx..0x%llx])\n",
+                    i,
+                    (unsigned long long)prev_limit,
+                    (unsigned long long)limit);
+        }
+
         prev_limit = limit + 1;
     }
 
@@ -613,72 +621,53 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
         return false;
     }
 
-    /* ILV selection: probe shifts (6..16) to find a populated entry.
-     * This avoids hardcoding a single index derivation. */
+    /* Try multiple plausible index shifts rather than hardcoding one.
+     * This makes ILV probing robust across BIOS interleave granularity settings. */
     int ways = r->chanways;
-    int chosen_shift = -1;
-    int chosen_idx = -1;
-    int chosen_w = -1;
-    uint32_t chosen_ilv = 0;
-
     for (int sh = 6; sh <= 16; sh++) {
         int idx = (int)((addr >> sh) & (uint64_t)(ways - 1));
-        uint32_t ilv_base = 0x120 + 32U * (uint32_t)(rule * 8 + idx);
-
         if (g_verbose) {
-            fprintf(stderr, "RIR: probe shift=%d -> idx=%d ilv_base=0x%x\n", sh, idx, ilv_base);
+            fprintf(stderr, "RIR: probe sh=%d ways=%d -> idx=%d\n", sh, ways, idx);
         }
+
+        /* ILV base: 8 indices per rule, 8 dwords per index, 32 bytes per index */
+        uint32_t ilv_base = 0x120 + 32U * (uint32_t)(rule * 8 + idx);
 
         for (int w = 0; w < 8; w++) {
             uint32_t ilv = 0;
             int rc = pci_read_u32(s->imc[r->imc].chan[r->channel].cdev,
                                   ilv_base + 4U * (uint32_t)w, &ilv);
             if (rc != 0) {
-                if (g_verbose) {
-                    fprintf(stderr, "RIR_FAIL: read ILV sh=%d idx=%d w=%d rc=%d reg=0x%x\n",
-                            sh, idx, w, rc, ilv_base + 4U * (uint32_t)w);
-                }
+                if (g_verbose) fprintf(stderr, "RIR_FAIL: read ILV sh=%d idx=%d w=%d rc=%d reg=0x%x\n",
+                                       sh, idx, w, rc, ilv_base + 4U * (uint32_t)w);
                 return false;
             }
 
             if (g_verbose) {
-                fprintf(stderr, "RIR: ilv[sh=%d idx=%d w=%d] @0x%x = 0x%08x\n",
+                fprintf(stderr, "RIR: ilv[sh=%d idx=%d][w=%d] @0x%x = 0x%08x\n",
                         sh, idx, w, ilv_base + 4U * (uint32_t)w, ilv);
             }
 
             if (ilv == 0) continue;
 
-            chosen_shift = sh;
-            chosen_idx = idx;
-            chosen_w = w;
-            chosen_ilv = ilv;
-            goto ilv_found;
+            r->channel_rank = (int)SKX_RIR_CHAN_RANK(ilv);
+            r->rank_address = addr + SKX_RIR_OFFSET(ilv);
+
+            r->dimm = (r->channel_rank >> 1) & 1;
+            r->cs   = r->channel_rank & 1;
+            r->rank = r->channel_rank;
+
+            if (g_verbose) {
+                fprintf(stderr, "RIR: choose sh=%d w=%d -> channel_rank=%d dimm=%d cs=%d rank=%d rank_address=%#" PRIx64 "\n",
+                        sh, w, r->channel_rank, r->dimm, r->cs, r->rank, r->rank_address);
+            }
+            return true;
         }
     }
 
-    if (g_verbose) fprintf(stderr, "RIR_FAIL: no populated ILV entry found (rule=%d)\n", rule);
+    if (g_verbose) fprintf(stderr, "RIR_FAIL: no non-zero ILV entry found (chanways=%d)\n", r->chanways);
     return false;
-
-ilv_found:
-    (void)chosen_shift;
-    (void)chosen_idx;
-
-    r->channel_rank = (int)SKX_RIR_CHAN_RANK(chosen_ilv);
-    r->rank_address = addr + SKX_RIR_OFFSET(chosen_ilv);
-
-    r->dimm = (r->channel_rank >> 1) & 1;
-    r->cs   = r->channel_rank & 1;
-    r->rank = r->channel_rank;
-
-    if (g_verbose) {
-        fprintf(stderr, "RIR_OK: rule=%d w=%d -> channel_rank=%d dimm=%d cs=%d rank=%d rank_address=%#" PRIx64 "\n",
-                rule, chosen_w, r->channel_rank, r->dimm, r->cs, r->rank, r->rank_address);
-    }
-
-    return true;
 }
-
-/* ---- MAD decode ---- */
 
 static bool skx_mad_decode(SkxSocket socks[2], DecodedAddr *r)
 {
@@ -718,11 +707,11 @@ static bool skx_decode(SkxSocket socks[2], DecodedAddr *r)
 
     if (!skx_tad_decode(socks, r)) {
         if (g_verbose) fprintf(stderr, "FAIL: TAD (PA=%#" PRIx64 " sock=%d imc=%d chan=%d)\n",
-                               r->addr, r->socket, r->imc, r->channel);
+                r->addr, r->socket, r->imc, r->channel);
         return false;
     }
 
-    /* Option B: discard channels with no valid RIR rules */
+    /* Option B: discard channels that have no valid RIR rules */
     if (!g_chan_usable[r->socket][r->imc][r->channel]) {
         if (g_verbose) fprintf(stderr, "DISCARD: unusable channel (no RIR_VALID) sock=%d imc=%d chan=%d\n",
                                r->socket, r->imc, r->channel);
@@ -731,13 +720,13 @@ static bool skx_decode(SkxSocket socks[2], DecodedAddr *r)
 
     if (!skx_rir_decode(socks, r)) {
         if (g_verbose) fprintf(stderr, "FAIL: RIR (PA=%#" PRIx64 " sock=%d imc=%d chan=%d chan_addr=%#" PRIx64 ")\n",
-                               r->addr, r->socket, r->imc, r->channel, r->chan_addr);
+                r->addr, r->socket, r->imc, r->channel, r->chan_addr);
         return false;
     }
 
     if (!skx_mad_decode(socks, r)) {
         if (g_verbose) fprintf(stderr, "FAIL: MAD (PA=%#" PRIx64 " sock=%d imc=%d chan=%d dimm=%d)\n",
-                               r->addr, r->socket, r->imc, r->channel, r->dimm);
+                r->addr, r->socket, r->imc, r->channel, r->dimm);
         return false;
     }
 
@@ -792,8 +781,7 @@ static int build_sockets(PciDev *all, size_t nall, SkxSocket socks[2])
     return 0;
 }
 
-/* ---- Option B: scan channel usability by checking RIR_VALID ---- */
-
+/* Option B: scan channels at startup and mark usable only if there is at least one RIR_VALID=1 entry */
 static void skx_scan_channel_usability(SkxSocket socks[2])
 {
     memset(g_chan_usable, 0, sizeof(g_chan_usable));
@@ -811,16 +799,14 @@ static void skx_scan_channel_usability(SkxSocket socks[2])
                     if (SKX_RIR_VALID(way)) { ok = true; break; }
                 }
                 g_chan_usable[sock][imc][ch] = ok;
-                if (g_verbose) {
-                    fprintf(stderr, "USABLE: sock=%d imc=%d chan=%d -> %s\n",
-                            sock, imc, ch, ok ? "yes" : "no");
-                }
+                fprintf(stderr, "USABLE: sock=%d imc=%d chan=%d -> %s\n",
+                        sock, imc, ch, ok ? "yes" : "no");
             }
         }
     }
 }
 
-/* ---- PMU validation (unchanged) ---- */
+/* ---- PMU validation: which uncore_imc_X increments most ---- */
 
 static long perf_event_open_wrap(struct perf_event_attr *attr, pid_t pid, int cpu, int group_fd, unsigned long flags)
 {
@@ -995,7 +981,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Option B: pre-scan which channels have any valid RIR rules */
+    /* Option B: scan channel usability at startup */
     skx_scan_channel_usability(socks);
 
     /* tohm/tolm: keep conservative; avoid rejecting normal DRAM */
@@ -1049,9 +1035,7 @@ int main(int argc, char **argv)
         while (got < want_n && attempts < max_attempts) {
             attempts++;
 
-            if (g_verbose) {
-                fprintf(stderr, "\n=== attempt %zu ===\n", attempts);
-            }
+            if (g_verbose) fprintf(stderr, "\n=== attempt %zu ===\n", attempts);
 
             size_t page = (size_t)(xorshift64star(&seed) % pages);
             size_t cl_off = (size_t)(xorshift64star(&seed) % (g_pagesz / 64)) * 64;
@@ -1060,28 +1044,20 @@ int main(int argc, char **argv)
             *(volatile uint8_t *)va = (uint8_t)(attempts & 0xff);
 
             uint64_t pa = 0;
-            if (va_to_pa(va, &pa) != 0) {
-                if (g_verbose) fprintf(stderr, "SKIP: va_to_pa failed\n");
-                continue;
-            }
+            if (va_to_pa(va, &pa) != 0) continue;
 
             uint64_t key = pa >> 6;
             bool dup = false;
             for (size_t i = 0; i < seen_n; i++) {
                 if (seen[i] == key) { dup = true; break; }
             }
-            if (dup) {
-                if (g_verbose) fprintf(stderr, "SKIP: duplicate cache line\n");
-                continue;
-            }
+            if (dup) continue;
 
             DecodedAddr r;
             memset(&r, 0, sizeof(r));
             r.addr = pa;
 
-            if (!skx_decode(socks, &r)) {
-                continue;
-            }
+            if (!skx_decode(socks, &r)) continue;
 
             seen[seen_n++] = key;
 
@@ -1094,7 +1070,7 @@ int main(int argc, char **argv)
                 if (best >= 0) printf("PMU: uncore_imc_%d had max cas_count_read\n", best);
             }
 
-            printf("\n"); /* blank line between successes */
+            printf("\n");
             got++;
         }
 
