@@ -1,0 +1,100 @@
+VA=0x7abf06f8e340 PA=0x3e6b46340 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=1 bank=3 row=127834 col=1421
+
+VA=0x7abf0aee31c0 PA=0x5f65db1c0 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=3 bank=1 row=64302 col=1735
+
+VA=0x7abf00378d80 PA=0x464b2bd80 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=2 bank=1 row=12889 col=1782
+
+VA=0x7abf0c4a3780 PA=0x52fe65780 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=2 bank=3 row=38899 col=1374
+
+VA=0x7abf08dbe700 PA=0x4aea75700 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=3 row=22355 col=1372
+
+VA=0x7abf0c21a400 PA=0x2d70d3400 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=0 row=93062 col=1232
+
+VA=0x7abf0d863500 PA=0x673fd1500 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=0 bank=1 row=80382 col=1108
+
+VA=0x7abf0794c440 PA=0x72d6f9440 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=1 bank=0 row=104119 col=1617
+
+VA=0x7abf0693fd80 PA=0x6e7b4cd80 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=2 bank=1 row=95194 col=1846
+
+VA=0x7abefed3f400 PA=0x33e397400 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=0 row=106268 col=1488
+
+VA=0x7abf00196700 PA=0x6bf35a700 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=3 row=90010 col=1692
+
+VA=0x7abeff34f900 PA=0x65be9c900 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=0 bank=1 row=77300 col=1828
+
+VA=0x7abf01b0d100 PA=0x3e1903100 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=0 bank=1 row=127176 col=1220
+
+VA=0x7abf0c1f4f00 PA=0x5afdf2f00 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=3 row=55279 col=1212
+
+VA=0x7abf0a9cd900 PA=0x726257900 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=0 bank=1 row=103186 col=1508
+
+VA=0x7abf037f5c00 PA=0x7330a0c00 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=0 row=104837 col=1072
+
+VA=0x7abf000c6bc0 PA=0x6c971abc0 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=3 row=91320 col=1711
+
+VA=0x7abf0cb8ef80 PA=0x78c2b1f80 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=2 bank=3 row=116245 col=1150
+
+VA=0x7abf04d15cc0 PA=0x3e5965cc0 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=0 row=127691 col=1395
+
+VA=0x7abf06977d40 PA=0x6e2e9ed40 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=1 bank=1 row=94580 col=1973
+
+VA=0x7abf029988c0 PA=0x3a15b78c0 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=0 row=118957 col=1507
+
+VA=0x7abf0545a540 PA=0x20bfc1540 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=1 bank=1 row=67070 col=1109
+
+VA=0x7abeff358500 PA=0x481ff1500 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=0 bank=1 row=16639 col=1108
+
+VA=0x7abf03488d40 PA=0x3f620fd40 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=1 bank=1 row=129808 col=2037
+
+VA=0x7abf0436fb00 PA=0x7330abb00 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=3 row=104837 col=1772
+
+VA=0x7abf0d102f40 PA=0x3ac295f40 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=1 bank=3 row=120340 col=1405
+
+VA=0x7abf04feeb40 PA=0x7c8438b40 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=1 bank=3 row=123937 col=1581
+
+VA=0x7abf0cb3fb00 PA=0x5425feb00 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=3 row=41263 col=1964
+
+VA=0x7abf023cc380 PA=0x3ee632380 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=2 bank=3 row=128817 col=1166
+
+VA=0x7abf011bc4c0 PA=0x46bd494c0 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=0 row=13802 col=1619
+
+VA=0x7abf0df32740 PA=0x5e7f57740 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=1 bank=3 row=62458 col=1501
+
+VA=0x7abf06a18540 PA=0x66b221540 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=1 bank=1 row=79249 col=1109
+
+VA=0x7abf08732bc0 PA=0x33ba6fbc0 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=3 row=105939 col=2031
+
+VA=0x7abf05a58940 PA=0x7e7bde940 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=1 bank=1 row=127966 col=1957
+
+VA=0x7abf089f49c0 PA=0x6756c09c0 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=3 bank=1 row=80566 col=1063
+
+VA=0x7abf02c8d4c0 PA=0x54de924c0 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=0 row=42740 col=1171
+
+VA=0x7abf0bf32300 PA=0x3524da300 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=3 row=108838 col=1676
+
+VA=0x7abf01891d00 PA=0x64a0b4d00 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=0 bank=1 row=75013 col=1332
+
+VA=0x7abf029e2b40 PA=0x601930b40 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=1 bank=3 row=65737 col=1069
+
+VA=0x7abf04c7eb40 PA=0x69330ab40 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=1 bank=3 row=84376 col=1709
+
+VA=0x7abeffe6e780 PA=0x29f82f780 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=2 bank=3 row=85953 col=2014
+
+VA=0x7abf06e25940 PA=0x3719cd940 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=1 bank=1 row=112846 col=1893
+
+VA=0x7abf06c65800 PA=0x3a1b73800 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=0 row=119003 col=1248
+
+VA=0x7abf09fc1380 PA=0x26f81b380 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=2 bank=3 row=79808 col=1742
+
+VA=0x7abf06fc47c0 PA=0x3eeb657c0 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=3 row=128859 col=1375
+
+VA=0x7abf0ac29980 PA=0x604511980 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=2 bank=1 row=66088 col=1126
+
+VA=0x7abf0ad0b9c0 PA=0x6887809c0 -> sock=0 imc=0 chan=1 dimm=0 cs=1 rank=1 bg=3 bank=1 row=83004 col=1063
+
+VA=0x7abf002f0300 PA=0x3f43d9300 -> sock=0 imc=1 chan=0 dimm=0 cs=1 rank=1 bg=0 bank=3 row=129566 col=1612
+
+VA=0x7abf03b6b0c0 PA=0x6de3980c0 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=3 bank=0 row=93980 col=1539
+
+VA=0x7abefeb3a080 PA=0x47936e080 -> sock=0 imc=0 chan=0 dimm=0 cs=1 rank=1 bg=2 bank=0 row=15515 col=1922
+
