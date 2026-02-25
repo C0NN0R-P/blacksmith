@@ -231,7 +231,7 @@ typedef struct {
     int bank_group;
 } DecodedAddr;
 
-/* ---- register access macros from skx_base.c ---- */
+/* ---- register access macros ---- */
 
 #define SKX_GET_SAD(s, i, reg) \
     pci_read_u32((s)->sad_all, 0x60 + 8 * (i), &(reg))
@@ -276,7 +276,7 @@ typedef struct {
 #define SKX_RIR_CHAN_RANK(b)       GET_BITFIELD((b), 16, 19)
 #define SKX_RIR_OFFSET(b)          ((uint64_t)(GET_BITFIELD((b), 2, 15) << 26))
 
-/* ---- skx_base.c address bit tables/helpers (copied) ---- */
+/* ---- address bit tables/helpers ---- */
 
 static const int skx_open_row[20] =
     { 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37 };
@@ -309,7 +309,7 @@ static inline int skx_bank_bits(uint64_t v, int b0, int b1, bool xor_en, int x0,
     return (r1 << 1) | r0;
 }
 
-/* ---- DIMM config extraction (from your skx_get_dimm_config/skx_get_dimm_info usage) ---- */
+/* ---- DIMM config extraction ---- */
 
 #define IS_DIMM_PRESENT(mtr) (GET_BITFIELD((mtr), 31, 31) == 1)
 
@@ -329,10 +329,6 @@ static int skx_init_dimms_for_socket(SkxSocket *s)
                 if (pci_read_u32(s->imc[mc].chan[ch].cdev, 0x80 + 4 * d, &mtr) != 0) return -3;
 
                 SkxDimm *dd = &s->imc[mc].chan[ch].dimms[d];
-                /*if (!IS_DIMM_PRESENT(mtr)) {
-                    memset(dd, 0, sizeof(*dd));
-                    continue;
-                }*/
 
                 /* treat bit31 as advisory; geometry bits are what MAD needs */
                 int rows = (int)GET_BITFIELD(mtr, 2, 4) + 12;
@@ -340,14 +336,11 @@ static int skx_init_dimms_for_socket(SkxSocket *s)
 
                 /* reject obvious garbage */
                 if (rows < 12 || rows > 20 || cols < 10 || cols > 12) {
-                     memset(dd, 0, sizeof(*dd));
-                     continue;
+                    memset(dd, 0, sizeof(*dd));
+                    continue;
                 }
 
-                /* this mirrors the bits used by skx_get_dimm_info() */
                 int ranks = (int)GET_BITFIELD(mtr, 12, 13);
-                //int rows  = (int)GET_BITFIELD(mtr,  2,  4) + 12;
-                //int cols  = (int)GET_BITFIELD(mtr,  0,  1) + 10;
 
                 dd->close_pg        = GET_BITFIELD(mcmtr, 0, 0);
                 dd->bank_xor_enable = GET_BITFIELD(mcmtr, 9, 9);
@@ -355,21 +348,20 @@ static int skx_init_dimms_for_socket(SkxSocket *s)
                 dd->rowbits         = rows;
                 dd->colbits         = cols;
 
-                (void)ranks; /* ranks used in RIR stage */
+                (void)ranks;
             }
         }
     }
     return 0;
 }
 
-/* ---- SAD/TAD/RIR/MAD decode (ported from skx_base.c, but using sockets[]) ---- */
+/* ---- SAD/TAD/RIR/MAD decode ---- */
 
 static uint64_t g_tolm = 0;
 static uint64_t g_tohm = 0;
 
 static int find_socket_by_target(SkxSocket socks[2], int tgt)
 {
-    /* kernel code compares src_id; here we treat tgt 0/1 as socket index */
     if (tgt == 0) return 0;
     if (tgt == 1) return 1;
     return -1;
@@ -441,41 +433,12 @@ sad_found:
         lchan = (lchan << 1) | (SKX_ILV_TARGET(tgt) & 1);
     }
 
-    /* lchan is socket-local channel index (0..5) */
     res->socket  = s->socket;
     res->imc     = lchan / 3;
     res->channel = lchan % 3;
 
     return true;
 }
-
-static void dump_tad_regs(SkxSocket socks[2], int sock, int imc, int chan)
-{
-    SkxSocket *s = &socks[sock];
-
-    fprintf(stderr, "TAD DUMP: sock=%d imc=%d chan=%d dev=%s\n",
-            sock, imc, chan, s->imc[imc].chan[chan].cdev->bdf);
-
-    for (int i = 0; i < SKX_MAX_TAD; i++) {
-        uint32_t regb = 0, regw = 0, cho = 0;
-        uint32_t b0 = 0, w0 = 0, o0 = 0;
-
-        /* what we currently read */
-        (void)SKX_GET_TADBASE(s, imc, i, regb);
-        (void)SKX_GET_TADWAYNESS(s, imc, i, regw);
-        (void)SKX_GET_TADCHNILVOFFSET(s, imc, chan, i, cho);
-
-        /* also show raw reads directly from that channel dev for sanity */
-        pci_read_u32(s->imc[imc].chan[chan].cdev, 0x850 + 4*i, &b0);
-        pci_read_u32(s->imc[imc].chan[chan].cdev, 0x880 + 4*i, &w0);
-        pci_read_u32(s->imc[imc].chan[chan].cdev, 0x90  + 4*i, &o0);
-
-        fprintf(stderr,
-                "  i=%d base=0x%08x way=0x%08x off=0x%08x | raw(base)=0x%08x raw(way)=0x%08x raw(off)=0x%08x\n",
-                i, regb, regw, cho, b0, w0, o0);
-    }
-}
-
 
 static bool skx_tad_decode(SkxSocket socks[2], DecodedAddr *r)
 {
@@ -485,7 +448,6 @@ static bool skx_tad_decode(SkxSocket socks[2], DecodedAddr *r)
     for (int i = 0; i < SKX_MAX_TAD; i++) {
         uint32_t base_reg = 0, lim_reg = 0, way_reg = 0, off_reg = 0;
 
-        /* base/limit are 8-byte entries: base at +8*i, limit at +8*i+4 */
         if (pci_read_u32(s->imc[r->imc].chan[0].cdev, 0x850 + 8*i,     &base_reg) != 0) return false;
         if (pci_read_u32(s->imc[r->imc].chan[0].cdev, 0x850 + 8*i + 4, &lim_reg)  != 0) return false;
 
@@ -509,6 +471,7 @@ static bool skx_tad_decode(SkxSocket socks[2], DecodedAddr *r)
     return false;
 }
 
+/* Updated: dump ILV per (rule, idx) so the debug matches how we index it. */
 static void dump_rir_regs(SkxSocket socks[2], int sock, int imc, int chan)
 {
     SkxSocket *s = &socks[sock];
@@ -529,23 +492,23 @@ static void dump_rir_regs(SkxSocket socks[2], int sock, int imc, int chan)
                 (unsigned long long)SKX_RIR_OFFSET(way));
     }
 
-    /* ILV tables: dump first few dwords so we see structure */
-    for (int idx = 0; idx < 8; idx++) {
-        fprintf(stderr, "  ilv_idx=%d:", idx);
-        for (int w = 0; w < 8; w++) {
-            uint32_t ilv = 0;
-            pci_read_u32(dev, 0x120 + 32*idx + 4*w, &ilv);
-            fprintf(stderr, " %08x", ilv);
+    for (int rule = 0; rule < SKX_MAX_RIR; rule++) {
+        for (int idx = 0; idx < 8; idx++) {
+            fprintf(stderr, "  ilv[rule=%d][idx=%d]:", rule, idx);
+            for (int w = 0; w < 8; w++) {
+                uint32_t ilv = 0;
+                uint32_t base = 0x120 + 32U * (uint32_t)(rule * 8 + idx);
+                pci_read_u32(dev, base + 4U * (uint32_t)w, &ilv);
+                fprintf(stderr, " %08x", ilv);
+            }
+            fprintf(stderr, "\n");
         }
-        fprintf(stderr, "\n");
     }
 }
 
-
+/* Updated: fix prev_limit advancement for invalid entries and pick an ILV mapping by probing shifts. */
 static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
 {
-    /* RIR = Rank Interleave Rules. This stage maps a channel address to a channel-rank
-     * and produces a rank-relative address (rank_address) used by MAD decode. */
     dump_rir_regs(socks, r->socket, r->imc, r->channel);
 
     SkxSocket *s = &socks[r->socket];
@@ -566,41 +529,40 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
             return false;
         }
 
-        fprintf(stderr, "RIR: wayness[%d]=0x%08x valid=%u ways=%u limit=0x%llx chan_rank=%u off=0x%llx prev_limit=0x%llx\n",
+        uint64_t limit = SKX_RIR_LIMIT(way);
+
+        fprintf(stderr,
+                "RIR: wayness[%d]=0x%08x valid=%u ways=%u limit=0x%llx chan_rank=%u off=0x%llx prev_limit=0x%llx\n",
                 i,
                 way,
                 (unsigned)SKX_RIR_VALID(way),
                 (unsigned)SKX_RIR_WAYS(way),
-                (unsigned long long)SKX_RIR_LIMIT(way),
+                (unsigned long long)limit,
                 (unsigned)SKX_RIR_CHAN_RANK(way),
                 (unsigned long long)SKX_RIR_OFFSET(way),
                 (unsigned long long)prev_limit);
 
-        uint64_t limit = SKX_RIR_LIMIT(way);
-
-        if (!SKX_RIR_VALID(way)) {
+        if (SKX_RIR_VALID(way)) {
+            if (addr >= prev_limit && addr <= limit) {
+                r->chanways = SKX_RIR_WAYS(way);
+                rule = i;
+                fprintf(stderr, "RIR: selected rule=%d (addr in [0x%llx..0x%llx]) chanways=%d\n",
+                        rule,
+                        (unsigned long long)prev_limit,
+                        (unsigned long long)limit,
+                        r->chanways);
+                break;
+            } else {
+                fprintf(stderr, "RIR: addr not in range for i=%d (range [0x%llx..0x%llx])\n",
+                        i,
+                        (unsigned long long)prev_limit,
+                        (unsigned long long)limit);
+            }
+        } else {
             fprintf(stderr, "RIR: skip i=%d (invalid)\n", i);
-            prev_limit = limit + 1;
-            continue;
         }
 
-
-        if (addr >= prev_limit && addr <= limit) {
-            r->chanways = SKX_RIR_WAYS(way);
-            rule = i;
-            fprintf(stderr, "RIR: selected rule=%d (addr in [0x%llx..0x%llx]) chanways=%d\n",
-                    rule,
-                    (unsigned long long)prev_limit,
-                    (unsigned long long)limit,
-                    r->chanways);
-            break;
-        }
-
-        fprintf(stderr, "RIR: addr not in range for i=%d (range [0x%llx..0x%llx])\n",
-                i,
-                (unsigned long long)prev_limit,
-                (unsigned long long)limit);
-
+        /* Important: always advance cursor, even on invalid entries. */
         prev_limit = limit + 1;
     }
 
@@ -609,52 +571,86 @@ static bool skx_rir_decode(SkxSocket socks[2], DecodedAddr *r)
         return false;
     }
 
-    /* ways is power-of-two (1/2/4/8). idx uses bit 6 upward. */
-    int idx = (int)((addr >> 6) & (uint64_t)(r->chanways - 1));
-    fprintf(stderr, "RIR: rule=%d chanways=%d -> ilv_idx=%d (from (addr>>6)&(ways-1))\n",
-            rule, r->chanways, idx);
+    const int ways = r->chanways; /* 1/2/4/8 */
+    int chosen_shift = -1;
+    int chosen_idx = -1;
+    int chosen_w = -1;
+    uint32_t chosen_ilv = 0;
 
-    /* ILV table is 8 dwords per idx (32 bytes). scan all entries. */
-    uint32_t ilv_base = 0x120 + 32U * (uint32_t)(rule * 8 + idx);
+    const int min_shift = 6;
+    const int max_shift = 16;
 
-    for (int w = 0; w < 8; w++) {
-        uint32_t ilv = 0;
-        int rc = pci_read_u32(s->imc[r->imc].chan[r->channel].cdev,
-                              ilv_base + 4U * (uint32_t)w, &ilv);
-        if (rc != 0) {
-            fprintf(stderr, "RIR_FAIL: read ILV idx=%d w=%d rc=%d reg=0x%x\n",
-                    idx, w, rc, ilv_base + 4U * (uint32_t)w);
-            return false;
+    for (int sh = min_shift; sh <= max_shift; sh++) {
+        int idx = (int)((addr >> sh) & (uint64_t)(ways - 1));
+        uint32_t ilv_base = 0x120 + 32U * (uint32_t)(rule * 8 + idx);
+
+        fprintf(stderr, "RIR: probe shift=%d -> idx=%d (ways=%d) ilv_base=0x%x\n",
+                sh, idx, ways, ilv_base);
+
+        for (int w = 0; w < 8; w++) {
+            uint32_t ilv = 0;
+            int rc = pci_read_u32(s->imc[r->imc].chan[r->channel].cdev,
+                                  ilv_base + 4U * (uint32_t)w, &ilv);
+            if (rc != 0) {
+                fprintf(stderr, "RIR_FAIL: read ILV shift=%d idx=%d w=%d rc=%d reg=0x%x\n",
+                        sh, idx, w, rc, ilv_base + 4U * (uint32_t)w);
+                return false;
+            }
+
+            fprintf(stderr, "RIR:   ilv[shift=%d idx=%d w=%d] @0x%x = 0x%08x\n",
+                    sh, idx, w, ilv_base + 4U * (uint32_t)w, ilv);
+
+            if (ilv == 0) continue;
+
+            chosen_shift = sh;
+            chosen_idx = idx;
+            chosen_w = w;
+            chosen_ilv = ilv;
+            goto ilv_found;
         }
-
-        fprintf(stderr, "RIR: ilv[idx=%d][w=%d] @0x%x = 0x%08x\n",
-                idx, w, ilv_base + 4U * (uint32_t)w, ilv);
-
-        if (ilv == 0) {
-            fprintf(stderr, "RIR: skip ilv entry (zero)\n");
-            continue;
-        }
-
-        r->channel_rank = (int)SKX_RIR_CHAN_RANK(ilv);
-        r->rank_address = addr + SKX_RIR_OFFSET(ilv);
-
-        r->dimm = (r->channel_rank >> 1) & 1;
-        r->cs   = r->channel_rank & 1;
-        r->rank = r->channel_rank;
-
-        fprintf(stderr, "RIR: choose w=%d -> channel_rank=%d dimm=%d cs=%d rank=%d rank_address=%#" PRIx64 "\n",
-                w, r->channel_rank, r->dimm, r->cs, r->rank, r->rank_address);
-
-        return true;
     }
 
-    fprintf(stderr, "RIR_FAIL: no non-zero ILV entry for idx=%d (chanways=%d)\n",
-            idx, r->chanways);
+    /* Fallback to the old fixed shift so behaviour is predictable if probing finds nothing. */
+    {
+        int idx = (int)((addr >> 6) & (uint64_t)(ways - 1));
+        uint32_t ilv_base = 0x120 + 32U * (uint32_t)(rule * 8 + idx);
+        fprintf(stderr, "RIR: fallback fixed shift=6 idx=%d ilv_base=0x%x\n", idx, ilv_base);
+
+        for (int w = 0; w < 8; w++) {
+            uint32_t ilv = 0;
+            if (pci_read_u32(s->imc[r->imc].chan[r->channel].cdev,
+                             ilv_base + 4U * (uint32_t)w, &ilv) != 0) {
+                return false;
+            }
+            if (ilv == 0) continue;
+
+            chosen_shift = 6;
+            chosen_idx = idx;
+            chosen_w = w;
+            chosen_ilv = ilv;
+            goto ilv_found;
+        }
+    }
+
+    fprintf(stderr, "RIR_FAIL: no populated ILV entry found (ways=%d rule=%d)\n", ways, rule);
     return false;
+
+ilv_found:
+    fprintf(stderr, "RIR: selected ILV via shift=%d idx=%d w=%d ilv=0x%08x\n",
+            chosen_shift, chosen_idx, chosen_w, chosen_ilv);
+
+    r->channel_rank = (int)SKX_RIR_CHAN_RANK(chosen_ilv);
+    r->rank_address = addr + SKX_RIR_OFFSET(chosen_ilv);
+
+    r->dimm = (r->channel_rank >> 1) & 1;
+    r->cs   = r->channel_rank & 1;
+    r->rank = r->channel_rank;
+
+    fprintf(stderr, "RIR: decoded channel_rank=%d dimm=%d cs=%d rank=%d rank_address=%#" PRIx64 "\n",
+            r->channel_rank, r->dimm, r->cs, r->rank, r->rank_address);
+
+    return true;
 }
-
-
-
 
 static bool skx_mad_decode(SkxSocket socks[2], DecodedAddr *r)
 {
@@ -713,15 +709,14 @@ static bool skx_decode(SkxSocket socks[2], DecodedAddr *r)
     return true;
 }
 
-
 /* ---- socket discovery (your observed SKX layout) ---- */
 
 static int build_sockets(PciDev *all, size_t nall, SkxSocket socks[2])
 {
     memset(socks, 0, 2 * sizeof(SkxSocket));
 
-    socks[0].socket = 0; socks[0].bus = 0x3a;  /* IMC bus */
-    socks[1].socket = 1; socks[1].bus = 0xae;  /* IMC bus */
+    socks[0].socket = 0; socks[0].bus = 0x3a;
+    socks[1].socket = 1; socks[1].bus = 0xae;
 
     for (int si = 0; si < 2; si++) {
         uint8_t imc_bus = socks[si].bus;
@@ -733,12 +728,10 @@ static int build_sockets(PciDev *all, size_t nall, SkxSocket socks[2])
             return -1;
         }
 
-        /* IMC0 */
         socks[si].imc[0].chan[0].cdev = find_dev(all, nall, imc_bus, 0x0a, 0, 0x2040);
         socks[si].imc[0].chan[1].cdev = find_dev(all, nall, imc_bus, 0x0a, 4, 0x2044);
         socks[si].imc[0].chan[2].cdev = find_dev(all, nall, imc_bus, 0x0b, 0, 0x2048);
 
-        /* IMC1 */
         socks[si].imc[1].chan[0].cdev = find_dev(all, nall, imc_bus, 0x0c, 0, 0x2040);
         socks[si].imc[1].chan[1].cdev = find_dev(all, nall, imc_bus, 0x0c, 4, 0x2044);
         socks[si].imc[1].chan[2].cdev = find_dev(all, nall, imc_bus, 0x0d, 0, 0x2048);
@@ -762,8 +755,7 @@ static int build_sockets(PciDev *all, size_t nall, SkxSocket socks[2])
     return 0;
 }
 
-
-/* ---- PMU validation: which uncore_imc_X increments most ---- */
+/* ---- PMU validation ---- */
 
 static long perf_event_open_wrap(struct perf_event_attr *attr, pid_t pid, int cpu, int group_fd, unsigned long flags)
 {
@@ -783,7 +775,6 @@ static int read_u64_file(const char *path, uint64_t *out)
 
 static int parse_perf_event_config(const char *path, uint64_t *out_cfg)
 {
-    /* expects "event=0x..,umask=0x.." etc. */
     FILE *f = fopen(path, "r");
     if (!f) return -1;
     char buf[256];
@@ -803,7 +794,6 @@ static int parse_perf_event_config(const char *path, uint64_t *out_cfg)
 
 static int pmu_best_imc(void *va, int iters)
 {
-    /* best-effort. if perf blocks uncore, this returns -1. */
     const int MAX_IMC = 16;
     int fds[MAX_IMC];
     uint64_t start[MAX_IMC], end[MAX_IMC];
@@ -827,7 +817,7 @@ static int pmu_best_imc(void *va, int iters)
         attr.exclude_kernel = 0;
         attr.exclude_hv = 0;
 
-        int fd = (int)perf_event_open_wrap(&attr, -1, 0 /* any cpu */, -1, 0);
+        int fd = (int)perf_event_open_wrap(&attr, -1, 0, -1, 0);
         if (fd < 0) {
             return -1;
         }
@@ -865,7 +855,7 @@ static int pmu_best_imc(void *va, int iters)
             best = i;
         }
     }
-    return best; /* uncore_imc_<best> */
+    return best;
 }
 
 /* ---- main ---- */
@@ -936,7 +926,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* tohm/tolm: keep conservative; avoid rejecting normal DRAM */
     g_tolm = 0;
     g_tohm = ~0ULL;
 
@@ -969,7 +958,6 @@ int main(int argc, char **argv)
         uint64_t seed = ((uint64_t)ts.tv_sec << 32) ^ (uint64_t)ts.tv_nsec ^ (uint64_t)getpid();
         if (seed == 0) seed = 1;
 
-        /* track unique cache lines by PA>>6 */
         uint64_t *seen = calloc(want_n, sizeof(uint64_t));
         if (!seen) {
             fprintf(stderr, "calloc failed\n");
@@ -1021,7 +1009,6 @@ int main(int argc, char **argv)
             }
 
             printf("\n");
-
             got++;
         }
 
