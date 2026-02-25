@@ -22,6 +22,7 @@
 #define PAGE_SIZE 4096ULL
 #endif
 
+
 /* ----------- small helpers (log/parse/pin) ----------- */
 
 static void die(const char *fmt, ...) __attribute__((noreturn));
@@ -50,17 +51,14 @@ static void pin_to_cpu0(void)
     CPU_ZERO(&set);
     CPU_SET(0, &set);
     if (sched_setaffinity(0, sizeof(set), &set) != 0) {
-        /* Not fatal, but it helps a lot if it works. */
         fprintf(stderr, "warn: sched_setaffinity failed: %s\n", strerror(errno));
     }
 }
 
 static void try_raise_priority(void)
 {
-    /* This is best-effort. */
-    if (setpriority(PRIO_PROCESS, 0, -10) != 0) {
-        /* Fine; many systems restrict negative nice without extra caps. */
-    }
+    /* Best-effort: reduces scheduler noise but isn't required. */
+    (void)setpriority(PRIO_PROCESS, 0, -10);
 }
 
 /* ----------- VA -> PA using /proc/self/pagemap ----------- */
@@ -70,8 +68,6 @@ static int g_pagemap_fd = -1;
 /*
  * Translate a userspace virtual address to a physical address.
  * Returns true on success, false if the page isn't present or pagemap is blocked.
- *
- * Safety: this is read-only. It should not crash the machine.
  */
 static bool va_to_pa(uint64_t va, uint64_t *pa_out)
 {
@@ -100,10 +96,7 @@ static bool va_to_pa(uint64_t va, uint64_t *pa_out)
 
 /* ----------- timing core ----------- */
 
-/*
- * Serialised timestamp. RDTSCP is partially serialising; we also use fences.
- * (In practice: good enough for this kind of relative comparison.)
- */
+/* Serialised timestamp. */
 static inline uint64_t rdtscp_serial(void)
 {
     unsigned aux;
@@ -112,7 +105,7 @@ static inline uint64_t rdtscp_serial(void)
     return t;
 }
 
-/* Force a line out of caches. */
+/* Force a cache line out of the caches (so next access tends towards DRAM). */
 static inline void flush_line(void *p)
 {
     _mm_clflush(p);
@@ -130,7 +123,6 @@ static inline uint64_t timed_load_cycles(volatile uint8_t *p)
 
 /*
  * Measure baseline: A only. Each iteration flushes A then times a load of A.
- * Returns average cycles per access (double).
  */
 static double measure_baseline(volatile uint8_t *a, int iters)
 {
@@ -144,8 +136,8 @@ static double measure_baseline(volatile uint8_t *a, int iters)
 }
 
 /*
- * Measure alternate: ABAB... We time only the A loads, but in the presence of B.
- * Each step flushes the line it is about to touch so both are DRAM-ish.
+ * Measure alternate: touch B then time A (both flushed first).
+ * The intent is to perturb the row-buffer/bank state before the A measurement.
  */
 static double measure_alternate(volatile uint8_t *a, volatile uint8_t *b, int iters)
 {
@@ -155,7 +147,6 @@ static double measure_alternate(volatile uint8_t *a, volatile uint8_t *b, int it
         flush_line((void*)b);
         _mm_mfence();
 
-        /* Touch B first to disturb row-buffer state, then time A. */
         (void)*b;
         sum_a += timed_load_cycles(a);
     }
@@ -163,19 +154,13 @@ static double measure_alternate(volatile uint8_t *a, volatile uint8_t *b, int it
 }
 
 /*
- * Conflict score:
+ * Directional conflict score:
  *   score = avg_A_cycles_with_B / avg_A_cycles_alone
- *
- * Typical interpretation:
- *   - ~1.0  : no measurable interference
- *   - 1.2+  : often "same bank / row-buffer conflict" (very platform/noise dependent)
- *
- * We average across 'repeats' independent measurements.
  */
-static double conflict_score(volatile uint8_t *a,
-                             volatile uint8_t *b,
-                             int iters,
-                             int repeats)
+static double conflict_score_dir(volatile uint8_t *a,
+                                volatile uint8_t *b,
+                                int iters,
+                                int repeats)
 {
     double base_sum = 0.0;
     double alt_sum  = 0.0;
@@ -188,8 +173,32 @@ static double conflict_score(volatile uint8_t *a,
     double base = base_sum / (double)repeats;
     double alt  = alt_sum  / (double)repeats;
 
-    if (base < 1.0) base = 1.0; /* ultra-defensive; avoid divide-by-zero */
+    if (base < 1.0) base = 1.0;
     return alt / base;
+}
+
+/*
+ * Symmetric score.
+ *
+ * Why this matters (this is the bug behind the "everything became bank 63" symptom):
+ *   The earlier greedy clustering used a directional score A<-B.
+ *   If noise makes many directional scores sit below your threshold, you keep
+ *   creating new classes until you hit max_classes; after that, the old code
+ *   dumped everything into the *last* class (e.g. 63).
+ *
+ * Here we:
+ *   - compute both directions and average them
+ *   - never dump into the last class when we hit the cap; we assign to the
+ *     best existing class instead.
+ */
+static double conflict_score_sym(volatile uint8_t *a,
+                                volatile uint8_t *b,
+                                int iters,
+                                int repeats)
+{
+    double s1 = conflict_score_dir(a, b, iters, repeats);
+    double s2 = conflict_score_dir(b, a, iters, repeats);
+    return 0.5 * (s1 + s2);
 }
 
 /* ----------- clustering ----------- */
@@ -207,14 +216,17 @@ typedef struct {
 } class_t;
 
 /*
- * Greedy clustering:
+ * Greedy clustering (cheap):
  *  - Start with class 0 using item 0 as rep
  *  - For each new item i:
  *      compute score vs each class rep
  *      if max score >= threshold -> assign to that class
- *      else -> start new class with i as rep
+ *      else -> start new class with i as rep (until cap)
+ *      if cap reached -> assign to best existing class (do NOT dump into last)
  *
- * This is cheap and "works soon" for demo/progress, but it's not perfect.
+ * Practical defaults:
+ *   - if you want something close to "banks", set --max-classes 16
+ *   - tune --thresh until you get a sensible number of classes
  */
 static int cluster_items(item_t *items,
                          int n_items,
@@ -225,7 +237,6 @@ static int cluster_items(item_t *items,
                          double threshold)
 {
     int n_classes = 0;
-
     if (n_items <= 0) return 0;
 
     classes[0].rep_index = 0;
@@ -235,36 +246,40 @@ static int cluster_items(item_t *items,
     n_classes = 1;
 
     for (int i = 1; i < n_items; i++) {
-        double best_score = 0.0;
-        int best_class = -1;
+        double best_score = -1.0;
+        int best_class = 0;
 
         for (int c = 0; c < n_classes; c++) {
             int rep = classes[c].rep_index;
-            double s = conflict_score(items[rep].va, items[i].va, iters, repeats);
+            double s = conflict_score_sym(items[rep].va, items[i].va, iters, repeats);
             if (s > best_score) {
                 best_score = s;
                 best_class = c;
             }
         }
 
-        if (best_class >= 0 && best_score >= threshold) {
+        /* Case 1: strong evidence of interference with an existing class rep. */
+        if (best_score >= threshold) {
             items[i].bank_class = best_class;
             items[i].score_vs_rep = best_score;
             classes[best_class].count++;
-        } else {
-            if (n_classes >= max_classes) {
-                /* If we hit the cap, dump into the "last" class to keep running. */
-                items[i].bank_class = n_classes - 1;
-                items[i].score_vs_rep = best_score;
-                classes[n_classes - 1].count++;
-            } else {
-                items[i].bank_class = n_classes;
-                items[i].score_vs_rep = 1.0;
-                classes[n_classes].rep_index = i;
-                classes[n_classes].count = 1;
-                n_classes++;
-            }
+            continue;
         }
+
+        /* Case 2: no strong match -> create a new class if we still can. */
+        if (n_classes < max_classes) {
+            items[i].bank_class = n_classes;
+            items[i].score_vs_rep = best_score;
+            classes[n_classes].rep_index = i;
+            classes[n_classes].count = 1;
+            n_classes++;
+            continue;
+        }
+
+        /* Case 3: cap reached -> *still* assign to best existing class. */
+        items[i].bank_class = best_class;
+        items[i].score_vs_rep = best_score;
+        classes[best_class].count++;
     }
 
     return n_classes;
@@ -281,23 +296,6 @@ static void write_csv(FILE *f, const item_t *items, int n_items)
                 items[i].pa,
                 items[i].bank_class,
                 items[i].score_vs_rep);
-    }
-}
-
-/* Minimal JSON string escaping for our limited needs. */
-static void json_put_escaped(FILE *f, const char *s)
-{
-    for (; *s; s++) {
-        unsigned char c = (unsigned char)*s;
-        if (c == '\\' || c == '"') {
-            fputc('\\', f);
-            fputc(c, f);
-        } else if (c >= 0x20) {
-            fputc(c, f);
-        } else {
-            /* Control chars -> \u00XX */
-            fprintf(f, "\\u%04x", (unsigned)c);
-        }
     }
 }
 
@@ -323,7 +321,8 @@ static void write_json(FILE *f,
     fprintf(f, "  },\n");
     fprintf(f, "  \"items\": [\n");
     for (int i = 0; i < n_items; i++) {
-        fprintf(f, "    {\"va\":\"0x%016" PRIx64 "\",\"pa\":\"0x%016" PRIx64 "\",\"bank_class\":%d,\"score_vs_rep\":%.6f}%s\n",
+        fprintf(f,
+                "    {\"va\":\"0x%016" PRIx64 "\",\"pa\":\"0x%016" PRIx64 "\",\"bank_class\":%d,\"score_vs_rep\":%.6f}%s\n",
                 (uint64_t)(uintptr_t)items[i].va,
                 items[i].pa,
                 items[i].bank_class,
@@ -348,15 +347,15 @@ static void usage(const char *argv0)
         "  --iters I          timing iterations per measurement (default 4000)\n"
         "  --repeats R        measurement repeats (default 5)\n"
         "  --thresh T         conflict threshold (default 1.25)\n"
-        "  --max-classes K    cap number of classes (default 64)\n"
-        "  --csv PATH         write CSV to PATH\n"
-        "  --json PATH        write JSON to PATH\n"
+        "  --max-classes K    cap number of classes (default 16)\n"
+        "  --csv PATH         write CSV to PATH (default banks.csv)\n"
+        "  --json PATH        write JSON to PATH (default banks.json)\n"
         "  --no-pin           don't pin to CPU0\n"
         "\n"
         "notes:\n"
-        "  - VA->PA uses /proc/self/pagemap, which is typically restricted.\n"
-        "    If VA->PA fails, we still output VA but PA will be 0.\n"
-        , argv0);
+        "  - VA->PA uses /proc/self/pagemap, which may be restricted.\n"
+        "    If VA->PA fails, PA will be 0 in the output.\n",
+        argv0);
 }
 
 int main(int argc, char **argv)
@@ -367,9 +366,9 @@ int main(int argc, char **argv)
     int iters = 4000;
     int repeats = 5;
     double thresh = 1.25;
-    int max_classes = 64;
-    const char *csv_path = NULL;
-    const char *json_path = NULL;
+    int max_classes = 16; /* <- default now matches "16 banks" on DDR4 */
+    const char *csv_path = "banks.csv";
+    const char *json_path = "banks.json";
     bool do_pin = true;
 
     for (int i = 1; i < argc; i++) {
@@ -404,87 +403,69 @@ int main(int argc, char **argv)
 
     if (n <= 0) die("--n must be > 0");
     if (stride == 0) die("--stride must be > 0");
+    if (iters <= 0 || repeats <= 0) die("--iters/--repeats must be > 0");
+    if (max_classes <= 0) die("--max-classes must be > 0");
 
     if (do_pin) pin_to_cpu0();
     try_raise_priority();
 
     uint64_t alloc_bytes = alloc_mb * 1024ULL * 1024ULL;
 
-    /* mmap anonymous memory; page-aligned by definition */
+    /* Anonymous allocation; page-aligned by definition. */
     uint8_t *buf = mmap(NULL, alloc_bytes, PROT_READ | PROT_WRITE,
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (buf == MAP_FAILED) die("mmap failed: %s", strerror(errno));
 
-    /* Touch each page so it's faulted in before we start translating/timing. */
+    /* Fault pages in up front so pagemap sees them and timing isn't dominated by faults. */
     for (uint64_t off = 0; off < alloc_bytes; off += PAGE_SIZE) {
         buf[off] = (uint8_t)(off ^ 0xA5);
     }
 
+    /* Build candidate list. */
     item_t *items = calloc((size_t)n, sizeof(*items));
     if (!items) die("calloc items failed");
 
-    /* Enumerate candidates. We keep them within the allocated region. */
-    uint64_t max_off = alloc_bytes - 64; /* keep some slack */
-    uint64_t off = 0;
-
-    for (int i = 0; i < n; i++) {
-        uint64_t this_off = off;
-        if (this_off > max_off) {
-            /* Wrap if user asked for more items than fit in alloc/stride. */
-            this_off = (uint64_t)(i % (int)(max_off / stride + 1)) * stride;
-        }
-
-        volatile uint8_t *va = (volatile uint8_t *)(buf + this_off);
-        items[i].va = va;
-
+    int n_items = 0;
+    for (uint64_t off = 0; off < alloc_bytes && n_items < n; off += stride) {
+        volatile uint8_t *p = (volatile uint8_t *)(buf + off);
         uint64_t pa = 0;
-        if (!va_to_pa((uint64_t)(uintptr_t)va, &pa)) {
-            /* Not fatal; we just mark PA unknown. */
-            pa = 0;
-        }
-        items[i].pa = pa;
+        (void)va_to_pa((uint64_t)(uintptr_t)p, &pa);
 
-        items[i].bank_class = -1;
-        items[i].score_vs_rep = 0.0;
-
-        off += stride;
+        items[n_items].va = p;
+        items[n_items].pa = pa;
+        items[n_items].bank_class = -1;
+        items[n_items].score_vs_rep = 0.0;
+        n_items++;
     }
+
+    if (n_items <= 0) die("no items (allocation too small?)");
 
     class_t *classes = calloc((size_t)max_classes, sizeof(*classes));
     if (!classes) die("calloc classes failed");
 
-    int n_classes = cluster_items(items, n, classes, max_classes, iters, repeats, thresh);
+    fprintf(stderr,
+            "info: n_items=%d iters=%d repeats=%d thresh=%.3f max_classes=%d stride=%" PRIu64 " alloc=%" PRIu64 "\n",
+            n_items, iters, repeats, thresh, max_classes, stride, alloc_bytes);
 
-    /* Default: CSV to stdout if the user didn't ask for files. */
-    bool wrote_any = false;
+    int n_classes = cluster_items(items, n_items, classes, max_classes, iters, repeats, thresh);
 
-    if (csv_path) {
-        FILE *f = fopen(csv_path, "w");
-        if (!f) die("failed to open csv: %s", strerror(errno));
-        write_csv(f, items, n);
-        fclose(f);
-        wrote_any = true;
-    }
+    /* Emit outputs. */
+    FILE *fcsv = fopen(csv_path, "w");
+    if (!fcsv) die("open csv '%s' failed: %s", csv_path, strerror(errno));
+    write_csv(fcsv, items, n_items);
+    fclose(fcsv);
 
-    if (json_path) {
-        FILE *f = fopen(json_path, "w");
-        if (!f) die("failed to open json: %s", strerror(errno));
-        write_json(f, items, n, n_classes, thresh, iters, repeats, alloc_bytes, stride);
-        fclose(f);
-        wrote_any = true;
-    }
+    FILE *fjson = fopen(json_path, "w");
+    if (!fjson) die("open json '%s' failed: %s", json_path, strerror(errno));
+    write_json(fjson, items, n_items, n_classes, thresh, iters, repeats, alloc_bytes, stride);
+    fclose(fjson);
 
-    if (!wrote_any) {
-        write_csv(stdout, items, n);
-    }
+    fprintf(stderr, "done: classes=%d (csv=%s json=%s)\n", n_classes, csv_path, json_path);
 
-    fprintf(stderr, "classes=%d (thresh=%.2f iters=%d repeats=%d)\n",
-            n_classes, thresh, iters, repeats);
-
-    /* cleanup */
+    /* Clean up. */
     if (g_pagemap_fd >= 0) close(g_pagemap_fd);
     munmap((void*)buf, alloc_bytes);
-    free(items);
     free(classes);
+    free(items);
     return 0;
 }
