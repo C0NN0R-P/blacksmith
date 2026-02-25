@@ -22,8 +22,13 @@
 #define PAGE_SIZE 4096ULL
 #endif
 
+#ifndef CACHELINE
+#define CACHELINE 64ULL
+#endif
 
-/* ----------- small helpers (log/parse/pin) ----------- */
+/* ============================================================
+ * Small helpers (log/parse/pin)
+ * ============================================================ */
 
 static void die(const char *fmt, ...) __attribute__((noreturn));
 static void die(const char *fmt, ...)
@@ -61,7 +66,9 @@ static void try_raise_priority(void)
     (void)setpriority(PRIO_PROCESS, 0, -10);
 }
 
-/* ----------- VA -> PA using /proc/self/pagemap ----------- */
+/* ============================================================
+ * VA -> PA via /proc/self/pagemap (best-effort)
+ * ============================================================ */
 
 static int g_pagemap_fd = -1;
 
@@ -94,9 +101,10 @@ static bool va_to_pa(uint64_t va, uint64_t *pa_out)
     return true;
 }
 
-/* ----------- timing core ----------- */
+/* ============================================================
+ * Timing core
+ * ============================================================ */
 
-/* Serialised timestamp. */
 static inline uint64_t rdtscp_serial(void)
 {
     unsigned aux;
@@ -105,103 +113,100 @@ static inline uint64_t rdtscp_serial(void)
     return t;
 }
 
-/* Force a cache line out of the caches (so next access tends towards DRAM). */
 static inline void flush_line(void *p)
 {
     _mm_clflush(p);
 }
 
-/* Timed load from a volatile pointer so it can't be optimised away. */
-static inline uint64_t timed_load_cycles(volatile uint8_t *p)
+/*
+ * Stream baseline:
+ *   - Flush A once (start from DRAM-ish)
+ *   - Then repeatedly load A for `inner` iterations
+ *
+ * If the memory system allows it, the repeated loads can become row-buffer hits
+ * (or at least more stable than constantly flushing).
+ */
+static double stream_single(volatile uint8_t *a, int inner)
 {
-    _mm_lfence();
+    flush_line((void *)a);
+    _mm_mfence();
+
     uint64_t t0 = rdtscp_serial();
-    (void)*p;
+    for (int i = 0; i < inner; i++) {
+        (void)*a;
+        _mm_lfence();
+    }
     uint64_t t1 = rdtscp_serial();
-    return t1 - t0;
+
+    if (inner <= 0) return 1.0;
+    return (double)(t1 - t0) / (double)inner;
 }
 
 /*
- * Measure baseline: A only. Each iteration flushes A then times a load of A.
+ * Stream pair:
+ *   - Flush A and B once
+ *   - Alternate A,B,A,B,... for `inner` iterations
+ *
+ * If A and B map to the same bank but different rows, alternating tends to
+ * create row-buffer conflicts (slower). If they’re different banks, the
+ * controller can overlap more, often faster.
  */
-static double measure_baseline(volatile uint8_t *a, int iters)
+static double stream_pair(volatile uint8_t *a, volatile uint8_t *b, int inner)
 {
-    uint64_t sum = 0;
-    for (int i = 0; i < iters; i++) {
-        flush_line((void*)a);
-        _mm_mfence();
-        sum += timed_load_cycles(a);
-    }
-    return (double)sum / (double)iters;
-}
+    flush_line((void *)a);
+    flush_line((void *)b);
+    _mm_mfence();
 
-/*
- * Measure alternate: touch B then time A (both flushed first).
- * The intent is to perturb the row-buffer/bank state before the A measurement.
- */
-static double measure_alternate(volatile uint8_t *a, volatile uint8_t *b, int iters)
-{
-    uint64_t sum_a = 0;
-    for (int i = 0; i < iters; i++) {
-        flush_line((void*)a);
-        flush_line((void*)b);
-        _mm_mfence();
-
+    uint64_t t0 = rdtscp_serial();
+    for (int i = 0; i < inner; i++) {
+        (void)*a;
+        _mm_lfence();
         (void)*b;
-        sum_a += timed_load_cycles(a);
+        _mm_lfence();
     }
-    return (double)sum_a / (double)iters;
+    uint64_t t1 = rdtscp_serial();
+
+    /* 2 loads per loop */
+    if (inner <= 0) return 1.0;
+    return (double)(t1 - t0) / (double)(2 * (double)inner);
 }
 
 /*
- * Directional conflict score:
- *   score = avg_A_cycles_with_B / avg_A_cycles_alone
+ * Symmetric interference score:
+ *   score(a,b) = avg_pair_cycles_per_load(a,b) / avg_single_cycles_per_load(a)
+ *
+ * Interpreting score:
+ *   ~1.00  -> little measurable interference
+ *   >1.00  -> alternating with B makes A slower (candidate same-bank conflict)
+ *   <1.00  -> alternating looks faster (noise / parallelism / luck)
+ *
+ * We also compute the reverse and average for symmetry.
  */
-static double conflict_score_dir(volatile uint8_t *a,
-                                volatile uint8_t *b,
-                                int iters,
-                                int repeats)
+static double score_sym(volatile uint8_t *a, volatile uint8_t *b, int inner, int repeats)
 {
-    double base_sum = 0.0;
-    double alt_sum  = 0.0;
+    double s_ab = 0.0;
+    double s_ba = 0.0;
 
     for (int r = 0; r < repeats; r++) {
-        base_sum += measure_baseline(a, iters);
-        alt_sum  += measure_alternate(a, b, iters);
+        double base_a = stream_single(a, inner);
+        double pair_ab = stream_pair(a, b, inner);
+        if (base_a < 1.0) base_a = 1.0;
+        s_ab += (pair_ab / base_a);
+
+        double base_b = stream_single(b, inner);
+        double pair_ba = stream_pair(b, a, inner);
+        if (base_b < 1.0) base_b = 1.0;
+        s_ba += (pair_ba / base_b);
     }
 
-    double base = base_sum / (double)repeats;
-    double alt  = alt_sum  / (double)repeats;
-
-    if (base < 1.0) base = 1.0;
-    return alt / base;
+    s_ab /= (double)repeats;
+    s_ba /= (double)repeats;
+    return 0.5 * (s_ab + s_ba);
 }
 
-/*
- * Symmetric score.
- *
- * Why this matters (this is the bug behind the "everything became bank 63" symptom):
- *   The earlier greedy clustering used a directional score A<-B.
- *   If noise makes many directional scores sit below your threshold, you keep
- *   creating new classes until you hit max_classes; after that, the old code
- *   dumped everything into the *last* class (e.g. 63).
- *
- * Here we:
- *   - compute both directions and average them
- *   - never dump into the last class when we hit the cap; we assign to the
- *     best existing class instead.
- */
-static double conflict_score_sym(volatile uint8_t *a,
-                                volatile uint8_t *b,
-                                int iters,
-                                int repeats)
-{
-    double s1 = conflict_score_dir(a, b, iters, repeats);
-    double s2 = conflict_score_dir(b, a, iters, repeats);
-    return 0.5 * (s1 + s2);
-}
-
-/* ----------- clustering ----------- */
+/* ============================================================
+ * Data model
+ * ============================================================ */
 
 typedef struct {
     volatile uint8_t *va;
@@ -211,87 +216,152 @@ typedef struct {
 } item_t;
 
 typedef struct {
-    int rep_index;     /* index into items[] */
+    int medoid;   /* index into items[] */
     int count;
 } class_t;
 
-/*
- * Greedy clustering (cheap):
- *  - Start with class 0 using item 0 as rep
- *  - For each new item i:
- *      compute score vs each class rep
- *      if max score >= threshold -> assign to that class
- *      else -> start new class with i as rep (until cap)
- *      if cap reached -> assign to best existing class (do NOT dump into last)
+/* ============================================================
+ * Clustering (k-medoids-ish)
  *
- * Practical defaults:
- *   - if you want something close to "banks", set --max-classes 16
- *   - tune --thresh until you get a sensible number of classes
+ * We treat "similarity" as: higher score => more likely to be same-bank conflict.
+ * The bins are “likely same bank” bins (probabilistic).
+ * ============================================================ */
+
+/* Pick K seeds using a farthest-first heuristic on similarity.
+ * Intuition: avoid having the first K items all become permanent “unique” classes.
  */
-static int cluster_items(item_t *items,
-                         int n_items,
-                         class_t *classes,
-                         int max_classes,
-                         int iters,
-                         int repeats,
-                         double threshold)
+static void pick_initial_medoids(const double *S, int n, int K, int *medoids_out)
 {
-    int n_classes = 0;
-    if (n_items <= 0) return 0;
+    /* Start with 0. */
+    medoids_out[0] = 0;
 
-    classes[0].rep_index = 0;
-    classes[0].count = 1;
-    items[0].bank_class = 0;
-    items[0].score_vs_rep = 1.0;
-    n_classes = 1;
+    for (int k = 1; k < K; k++) {
+        int best_i = 0;
+        double best_dist = -1.0;
 
-    for (int i = 1; i < n_items; i++) {
-        double best_score = -1.0;
-        int best_class = 0;
+        for (int i = 0; i < n; i++) {
+            /* Distance = 1 / max_similarity_to_any_existing_medoid
+             * (so if it looks very similar to an existing medoid, it’s "close")
+             */
+            double max_sim = 0.0;
+            for (int j = 0; j < k; j++) {
+                int m = medoids_out[j];
+                double sim = S[(size_t)i * n + m];
+                if (sim > max_sim) max_sim = sim;
+            }
+            double dist = (max_sim > 1e-9) ? (1.0 / max_sim) : 1e9;
+            if (dist > best_dist) {
+                best_dist = dist;
+                best_i = i;
+            }
+        }
+        medoids_out[k] = best_i;
+    }
+}
 
-        for (int c = 0; c < n_classes; c++) {
-            int rep = classes[c].rep_index;
-            double s = conflict_score_sym(items[rep].va, items[i].va, iters, repeats);
-            if (s > best_score) {
-                best_score = s;
-                best_class = c;
+/* Assign each point to the medoid it is MOST similar to. */
+static void assign_to_medoids(item_t *items, int n, const double *S,
+                              class_t *classes, int K)
+{
+    for (int c = 0; c < K; c++) classes[c].count = 0;
+
+    for (int i = 0; i < n; i++) {
+        int best_c = 0;
+        double best_sim = -1.0;
+
+        for (int c = 0; c < K; c++) {
+            int m = classes[c].medoid;
+            double sim = S[(size_t)i * n + m];
+            if (sim > best_sim) {
+                best_sim = sim;
+                best_c = c;
             }
         }
 
-        /* Case 1: strong evidence of interference with an existing class rep. */
-        if (best_score >= threshold) {
-            items[i].bank_class = best_class;
-            items[i].score_vs_rep = best_score;
-            classes[best_class].count++;
-            continue;
-        }
-
-        /* Case 2: no strong match -> create a new class if we still can. */
-        if (n_classes < max_classes) {
-            items[i].bank_class = n_classes;
-            items[i].score_vs_rep = best_score;
-            classes[n_classes].rep_index = i;
-            classes[n_classes].count = 1;
-            n_classes++;
-            continue;
-        }
-
-        /* Case 3: cap reached -> *still* assign to best existing class. */
-        items[i].bank_class = best_class;
-        items[i].score_vs_rep = best_score;
-        classes[best_class].count++;
+        items[i].bank_class = best_c;
+        items[i].score_vs_rep = best_sim;
+        classes[best_c].count++;
     }
-
-    return n_classes;
 }
 
-/* ----------- output (CSV/JSON) ----------- */
+/* Recompute medoid per cluster as the item with max total similarity to cluster members. */
+static void recompute_medoids(const double *S, int n, item_t *items,
+                             class_t *classes, int K)
+{
+    for (int c = 0; c < K; c++) {
+        int best_i = classes[c].medoid;
+        double best_sum = -1.0;
+
+        for (int i = 0; i < n; i++) {
+            if (items[i].bank_class != c) continue;
+
+            double sum = 0.0;
+            for (int j = 0; j < n; j++) {
+                if (items[j].bank_class != c) continue;
+                sum += S[(size_t)i * n + j];
+            }
+
+            if (sum > best_sum) {
+                best_sum = sum;
+                best_i = i;
+            }
+        }
+
+        classes[c].medoid = best_i;
+    }
+}
+
+/* Main clustering driver. */
+static int cluster_k_medoids(item_t *items, int n, const double *S,
+                             class_t *classes, int K, int max_iters)
+{
+    if (K > n) K = n;
+    if (K <= 0) return 0;
+
+    int *medoids = calloc((size_t)K, sizeof(int));
+    if (!medoids) die("calloc medoids failed");
+
+    pick_initial_medoids(S, n, K, medoids);
+
+    for (int c = 0; c < K; c++) {
+        classes[c].medoid = medoids[c];
+        classes[c].count = 0;
+    }
+
+    /* Iterate assignment/medoid-update a few times. */
+    for (int it = 0; it < max_iters; it++) {
+        int old_medoids_same = 1;
+        int *old_m = calloc((size_t)K, sizeof(int));
+        if (!old_m) die("calloc old_m failed");
+        for (int c = 0; c < K; c++) old_m[c] = classes[c].medoid;
+
+        assign_to_medoids(items, n, S, classes, K);
+        recompute_medoids(S, n, items, classes, K);
+
+        for (int c = 0; c < K; c++) {
+            if (classes[c].medoid != old_m[c]) {
+                old_medoids_same = 0;
+                break;
+            }
+        }
+        free(old_m);
+
+        if (old_medoids_same) break;
+    }
+
+    free(medoids);
+    return K;
+}
+
+/* ============================================================
+ * Output (CSV/JSON)
+ * ============================================================ */
 
 static void write_csv(FILE *f, const item_t *items, int n_items)
 {
     fprintf(f, "va,pa,bank_class,score_vs_rep\n");
     for (int i = 0; i < n_items; i++) {
-        fprintf(f, "0x%016" PRIx64 ",0x%016" PRIx64 ",%d,%.3f\n",
+        fprintf(f, "0x%016" PRIx64 ",0x%016" PRIx64 ",%d,%.6f\n",
                 (uint64_t)(uintptr_t)items[i].va,
                 items[i].pa,
                 items[i].bank_class,
@@ -302,38 +372,60 @@ static void write_csv(FILE *f, const item_t *items, int n_items)
 static void write_json(FILE *f,
                        const item_t *items,
                        int n_items,
-                       int n_classes,
-                       double threshold,
-                       int iters,
+                       const class_t *classes,
+                       int K,
+                       int inner,
                        int repeats,
                        uint64_t alloc_bytes,
-                       uint64_t stride_bytes)
+                       uint64_t stride_bytes,
+                       int cluster_iters)
 {
     fprintf(f, "{\n");
     fprintf(f, "  \"meta\": {\n");
     fprintf(f, "    \"n_items\": %d,\n", n_items);
-    fprintf(f, "    \"n_classes\": %d,\n", n_classes);
-    fprintf(f, "    \"threshold\": %.6f,\n", threshold);
-    fprintf(f, "    \"iters\": %d,\n", iters);
+    fprintf(f, "    \"k\": %d,\n", K);
+    fprintf(f, "    \"inner\": %d,\n", inner);
     fprintf(f, "    \"repeats\": %d,\n", repeats);
+    fprintf(f, "    \"cluster_iters\": %d,\n", cluster_iters);
     fprintf(f, "    \"alloc_bytes\": %" PRIu64 ",\n", alloc_bytes);
     fprintf(f, "    \"stride_bytes\": %" PRIu64 "\n", stride_bytes);
     fprintf(f, "  },\n");
-    fprintf(f, "  \"items\": [\n");
-    for (int i = 0; i < n_items; i++) {
-        fprintf(f,
-                "    {\"va\":\"0x%016" PRIx64 "\",\"pa\":\"0x%016" PRIx64 "\",\"bank_class\":%d,\"score_vs_rep\":%.6f}%s\n",
-                (uint64_t)(uintptr_t)items[i].va,
-                items[i].pa,
-                items[i].bank_class,
-                items[i].score_vs_rep,
-                (i == n_items - 1) ? "" : ",");
+
+    fprintf(f, "  \"classes\": [\n");
+    for (int c = 0; c < K; c++) {
+        fprintf(f, "    {\n");
+        fprintf(f, "      \"id\": %d,\n", c);
+        fprintf(f, "      \"medoid\": {\n");
+        int m = classes[c].medoid;
+        fprintf(f, "        \"index\": %d,\n", m);
+        fprintf(f, "        \"va\": \"0x%016" PRIx64 "\",\n", (uint64_t)(uintptr_t)items[m].va);
+        fprintf(f, "        \"pa\": \"0x%016" PRIx64 "\"\n", items[m].pa);
+        fprintf(f, "      },\n");
+        fprintf(f, "      \"count\": %d,\n", classes[c].count);
+
+        fprintf(f, "      \"members\": [\n");
+        int first = 1;
+        for (int i = 0; i < n_items; i++) {
+            if (items[i].bank_class != c) continue;
+            if (!first) fprintf(f, ",\n");
+            first = 0;
+            fprintf(f,
+                    "        {\"index\":%d,\"va\":\"0x%016" PRIx64 "\",\"pa\":\"0x%016" PRIx64 "\",\"score_vs_medoid\":%.6f}",
+                    i,
+                    (uint64_t)(uintptr_t)items[i].va,
+                    items[i].pa,
+                    items[i].score_vs_rep);
+        }
+        fprintf(f, "\n      ]\n");
+        fprintf(f, "    }%s\n", (c == K - 1) ? "" : ",");
     }
     fprintf(f, "  ]\n");
     fprintf(f, "}\n");
 }
 
-/* ----------- main ----------- */
+/* ============================================================
+ * Main
+ * ============================================================ */
 
 static void usage(const char *argv0)
 {
@@ -341,32 +433,35 @@ static void usage(const char *argv0)
         "usage: %s [options]\n"
         "\n"
         "options:\n"
-        "  --n N              number of candidate addresses (default 1024)\n"
+        "  --n N              number of candidate addresses (default 256)\n"
+        "  --k K              number of bins/classes to form (default 16)\n"
         "  --alloc-mb MB      allocation size in MB (default 256)\n"
         "  --stride BYTES     stride between candidates (default 4096)\n"
-        "  --iters I          timing iterations per measurement (default 4000)\n"
-        "  --repeats R        measurement repeats (default 5)\n"
-        "  --thresh T         conflict threshold (default 1.25)\n"
-        "  --max-classes K    cap number of classes (default 16)\n"
+        "  --inner I          inner loop iterations per stream (default 20000)\n"
+        "  --repeats R        repeats per score (default 3)\n"
+        "  --cluster-iters T  k-medoids iterations (default 6)\n"
         "  --csv PATH         write CSV to PATH (default banks.csv)\n"
         "  --json PATH        write JSON to PATH (default banks.json)\n"
         "  --no-pin           don't pin to CPU0\n"
         "\n"
         "notes:\n"
-        "  - VA->PA uses /proc/self/pagemap, which may be restricted.\n"
-        "    If VA->PA fails, PA will be 0 in the output.\n",
+        "  - This is userspace-only. No kernel module.\n"
+        "  - VA->PA uses /proc/self/pagemap and may be restricted; PA may be 0.\n"
+        "  - n is default 256 because we compute an O(n^2) similarity matrix.\n",
         argv0);
 }
 
 int main(int argc, char **argv)
 {
-    int n = 1024;
+    int n = 256;
+    int k = 16;
     uint64_t alloc_mb = 256;
     uint64_t stride = PAGE_SIZE;
-    int iters = 4000;
-    int repeats = 5;
-    double thresh = 1.25;
-    int max_classes = 16; /* <- default now matches "16 banks" on DDR4 */
+
+    int inner = 20000;
+    int repeats = 3;
+    int cluster_iters = 6;
+
     const char *csv_path = "banks.csv";
     const char *json_path = "banks.json";
     bool do_pin = true;
@@ -374,18 +469,18 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--n") && i + 1 < argc) {
             n = (int)parse_u64(argv[++i]);
+        } else if (!strcmp(argv[i], "--k") && i + 1 < argc) {
+            k = (int)parse_u64(argv[++i]);
         } else if (!strcmp(argv[i], "--alloc-mb") && i + 1 < argc) {
             alloc_mb = parse_u64(argv[++i]);
         } else if (!strcmp(argv[i], "--stride") && i + 1 < argc) {
             stride = parse_u64(argv[++i]);
-        } else if (!strcmp(argv[i], "--iters") && i + 1 < argc) {
-            iters = (int)parse_u64(argv[++i]);
+        } else if (!strcmp(argv[i], "--inner") && i + 1 < argc) {
+            inner = (int)parse_u64(argv[++i]);
         } else if (!strcmp(argv[i], "--repeats") && i + 1 < argc) {
             repeats = (int)parse_u64(argv[++i]);
-        } else if (!strcmp(argv[i], "--thresh") && i + 1 < argc) {
-            thresh = strtod(argv[++i], NULL);
-        } else if (!strcmp(argv[i], "--max-classes") && i + 1 < argc) {
-            max_classes = (int)parse_u64(argv[++i]);
+        } else if (!strcmp(argv[i], "--cluster-iters") && i + 1 < argc) {
+            cluster_iters = (int)parse_u64(argv[++i]);
         } else if (!strcmp(argv[i], "--csv") && i + 1 < argc) {
             csv_path = argv[++i];
         } else if (!strcmp(argv[i], "--json") && i + 1 < argc) {
@@ -402,32 +497,32 @@ int main(int argc, char **argv)
     }
 
     if (n <= 0) die("--n must be > 0");
+    if (k <= 0) die("--k must be > 0");
     if (stride == 0) die("--stride must be > 0");
-    if (iters <= 0 || repeats <= 0) die("--iters/--repeats must be > 0");
-    if (max_classes <= 0) die("--max-classes must be > 0");
+    if (inner <= 0 || repeats <= 0) die("--inner/--repeats must be > 0");
 
     if (do_pin) pin_to_cpu0();
     try_raise_priority();
 
     uint64_t alloc_bytes = alloc_mb * 1024ULL * 1024ULL;
 
-    /* Anonymous allocation; page-aligned by definition. */
     uint8_t *buf = mmap(NULL, alloc_bytes, PROT_READ | PROT_WRITE,
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (buf == MAP_FAILED) die("mmap failed: %s", strerror(errno));
 
-    /* Fault pages in up front so pagemap sees them and timing isn't dominated by faults. */
+    /* Fault pages in up front so timing isn't dominated by page faults. */
     for (uint64_t off = 0; off < alloc_bytes; off += PAGE_SIZE) {
         buf[off] = (uint8_t)(off ^ 0xA5);
     }
 
-    /* Build candidate list. */
     item_t *items = calloc((size_t)n, sizeof(*items));
     if (!items) die("calloc items failed");
 
     int n_items = 0;
-    for (uint64_t off = 0; off < alloc_bytes && n_items < n; off += stride) {
+    for (uint64_t off = 0; off + CACHELINE < alloc_bytes && n_items < n; off += stride) {
+        /* Use a fixed cache-line offset inside each stride chunk. */
         volatile uint8_t *p = (volatile uint8_t *)(buf + off);
+
         uint64_t pa = 0;
         (void)va_to_pa((uint64_t)(uintptr_t)p, &pa);
 
@@ -438,18 +533,35 @@ int main(int argc, char **argv)
         n_items++;
     }
 
-    if (n_items <= 0) die("no items (allocation too small?)");
-
-    class_t *classes = calloc((size_t)max_classes, sizeof(*classes));
-    if (!classes) die("calloc classes failed");
+    if (n_items <= 1) die("need at least 2 items");
 
     fprintf(stderr,
-            "info: n_items=%d iters=%d repeats=%d thresh=%.3f max_classes=%d stride=%" PRIu64 " alloc=%" PRIu64 "\n",
-            n_items, iters, repeats, thresh, max_classes, stride, alloc_bytes);
+            "info: n_items=%d k=%d inner=%d repeats=%d stride=%" PRIu64 " alloc=%" PRIu64 "\n",
+            n_items, k, inner, repeats, stride, alloc_bytes);
 
-    int n_classes = cluster_items(items, n_items, classes, max_classes, iters, repeats, thresh);
+    /* Build similarity matrix S (n_items x n_items). */
+    double *S = calloc((size_t)n_items * (size_t)n_items, sizeof(double));
+    if (!S) die("calloc similarity matrix failed");
 
-    /* Emit outputs. */
+    /* Diagonal = 1.0 by definition (self). */
+    for (int i = 0; i < n_items; i++) {
+        S[(size_t)i * n_items + i] = 1.0;
+    }
+
+    /* Compute upper triangle and mirror. */
+    for (int i = 0; i < n_items; i++) {
+        for (int j = i + 1; j < n_items; j++) {
+            double s = score_sym(items[i].va, items[j].va, inner, repeats);
+            S[(size_t)i * n_items + j] = s;
+            S[(size_t)j * n_items + i] = s;
+        }
+    }
+
+    class_t *classes = calloc((size_t)k, sizeof(*classes));
+    if (!classes) die("calloc classes failed");
+
+    int K = cluster_k_medoids(items, n_items, S, classes, k, cluster_iters);
+
     FILE *fcsv = fopen(csv_path, "w");
     if (!fcsv) die("open csv '%s' failed: %s", csv_path, strerror(errno));
     write_csv(fcsv, items, n_items);
@@ -457,15 +569,15 @@ int main(int argc, char **argv)
 
     FILE *fjson = fopen(json_path, "w");
     if (!fjson) die("open json '%s' failed: %s", json_path, strerror(errno));
-    write_json(fjson, items, n_items, n_classes, thresh, iters, repeats, alloc_bytes, stride);
+    write_json(fjson, items, n_items, classes, K, inner, repeats, alloc_bytes, stride, cluster_iters);
     fclose(fjson);
 
-    fprintf(stderr, "done: classes=%d (csv=%s json=%s)\n", n_classes, csv_path, json_path);
+    fprintf(stderr, "done: k=%d (csv=%s json=%s)\n", K, csv_path, json_path);
 
-    /* Clean up. */
     if (g_pagemap_fd >= 0) close(g_pagemap_fd);
     munmap((void*)buf, alloc_bytes);
     free(classes);
+    free(S);
     free(items);
     return 0;
 }
