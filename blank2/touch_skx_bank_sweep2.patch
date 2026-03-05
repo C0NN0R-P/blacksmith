@@ -1,0 +1,288 @@
+*** skx_bank_sweep2.c.orig
+--- skx_bank_sweep2.c
+***************
+*** 1,20 ****
+  // skx_bank_sweep.c
+  // Userspace SKX address decoder + allocator + bank/bin collation + (optional) perf validation.
+  // Build: gcc -O2 -Wall -Wextra -std=c11 -o skx_bank_sweep skx_bank_sweep.c
+  //
+  // Typical run (pin CPU + memory to NUMA node 0):
+  //   sudo numactl --cpunodebind=0 --membind=0 ./skx_bank_sweep --bytes 268435456 --step 64 --max 2000
+  //
+  // Validation run (same pinning, validate best bank addr[0] with 20k flush+loads):
+  //   sudo numactl --cpunodebind=0 --membind=0 ./skx_bank_sweep --bytes 268435456 --step 64 --max 50000 --validate --validate-all-imcs
+  //
+  // Notes:
+  // - Needs root to read /sys/bus/pci/devices/*/config and /proc/self/pagemap on many systems.
+  // - Perf uncore access may require root and a permissive perf_event_paranoid setting.
+  // - Only decodes Intel Skylake-SP/Skylake-X style (family 6 model 0x55) memory controllers.
+  // - bank_id = bg*4 + bank (0..15) for DDR4-style 4 bank-groups x 4 banks.
+--- 1,24 ----
+  // skx_bank_sweep.c
+  // Userspace SKX address decoder + allocator + bank/bin collation + (optional) perf validation.
+  // Build: gcc -O2 -Wall -Wextra -std=c11 -o skx_bank_sweep skx_bank_sweep.c
+  //
+  // Typical run (pin CPU + memory to NUMA node 0):
+  //   sudo numactl --cpunodebind=0 --membind=0 ./skx_bank_sweep --bytes 268435456 --step 64 --max 2000
+  //
+  // Validation run (same pinning, validate best bank addr[0] with 20k flush+loads):
+  //   sudo numactl --cpunodebind=0 --membind=0 ./skx_bank_sweep --bytes 268435456 --step 64 --max 50000 --validate --validate-all-imcs
++ //
++ // Bank verification helper (run a tight clflush+load loop inside the same process so perf can measure it):
++ //   sudo perf stat -a -C 0 \
++ //     -e 'uncore_imc_0/event=0xb0,umask=0x9/' \
++ //     -e 'uncore_imc_0/event=0xb0,umask=0x8/' \
++ //     -e 'uncore_imc_0/event=0xb0,umask=0xa/' \
++ //     -- sudo numactl --cpunodebind=0 --membind=0 ./skx_bank_sweep2 --bytes 268435456 --step 64 --max 50000 --touch-bank 9 --touch-idx 0 --touch-iters 5000000
+  //
+  // Notes:
+  // - Needs root to read /sys/bus/pci/devices/*/config and /proc/self/pagemap on many systems.
+  // - Perf uncore access may require root and a permissive perf_event_paranoid setting.
+  // - Only decodes Intel Skylake-SP/Skylake-X style (family 6 model 0x55) memory controllers.
+  // - bank_id = bg*4 + bank (0..15) for DDR4-style 4 bank-groups x 4 banks.
+***************
+*** 450,455 ****
+--- 454,506 ----
+  static uint64_t read_counter_fd(int fd) {
+      uint64_t v = 0;
+      if (read(fd, &v, sizeof(v)) != (ssize_t)sizeof(v)) return 0;
+      return v;
+  }
++
++ static void touch_one_va(uint64_t va, uint64_t iters) {
++     // Safety clamp: touching too hard can make the box unhappy.
++     if (iters < 1000) iters = 1000;
++     if (iters > 50000000ULL) {
++         warnx("warn: clamping --touch-iters to 50000000 for safety (was %" PRIu64 ")", iters);
++         iters = 50000000ULL;
++     }
++
++     volatile uint8_t *ptr = (volatile uint8_t *)(uintptr_t)va;
++     // Ensure mapping is present.
++     (void)*ptr;
++
++     printf("\n=== TOUCH LOOP ===\n");
++     printf("VA=0x%016" PRIx64 " iters=%" PRIu64 " (clflush+load)\n", va, iters);
++
++     uint64_t sink = 0;
++     for (uint64_t i = 0; i < iters; i++) {
++         do_clflush((const void *)ptr);
++         do_mfence();
++         do_lfence();
++         sink += *ptr;
++     }
++     // Stop compiler “help”.
++     if (sink == 0xFFFFFFFFFFFFFFFFULL) printf("sink=%" PRIu64 "\n", sink);
++     printf("TOUCH LOOP DONE\n");
++     printf("==================\n");
++ }
+***************
+*** 508,524 ****
+  static void usage(const char *argv0) {
+      fprintf(stderr,
+          "Usage: sudo %s [--bytes N] [--step N] [--max N] [--print-per-bank N]\n"
+          "            [--validate] [--validate-bank N] [--validate-idx N]\n"
+          "            [--validate-iters N] [--validate-all-imcs]\n"
+          "  --bytes            allocation size (default 256MiB)\n"
+          "  --step             stride in bytes when sampling (default 64)\n"
+          "  --max              max samples to collect total (default 50000)\n"
+          "  --print-per-bank   number of addresses to print from best bank (default 64)\n"
+          "  --validate         run uncore iMC CAS-read counter validation on one address\n"
+          "  --validate-bank    bank_id (0..15) to validate (default: best bank)\n"
+          "  --validate-idx     index within that bank vector (default: 0)\n"
+          "  --validate-iters   flush+load iterations (default: 20000; clamped for safety)\n"
+          "  --validate-all-imcs  also open counters for all uncore_imc_* and print all deltas\n",
+          argv0);
+  }
+--- 559,584 ----
+  static void usage(const char *argv0) {
+      fprintf(stderr,
+          "Usage: sudo %s [--bytes N] [--step N] [--max N] [--print-per-bank N]\n"
+          "            [--validate] [--validate-bank N] [--validate-idx N]\n"
+          "            [--validate-iters N] [--validate-all-imcs]\n"
++         "            [--touch-va HEX] [--touch-iters N]\n"
++         "            [--touch-bank N] [--touch-idx N]\n"
+          "  --bytes            allocation size (default 256MiB)\n"
+          "  --step             stride in bytes when sampling (default 64)\n"
+          "  --max              max samples to collect total (default 50000)\n"
+          "  --print-per-bank   number of addresses to print from best bank (default 64)\n"
+          "  --validate         run uncore iMC CAS-read counter validation on one address\n"
+          "  --validate-bank    bank_id (0..15) to validate (default: best bank)\n"
+          "  --validate-idx     index within that bank vector (default: 0)\n"
+          "  --validate-iters   flush+load iterations (default: 20000; clamped for safety)\n"
+          "  --validate-all-imcs  also open counters for all uncore_imc_* and print all deltas\n"
++         "  --touch-va         run a clflush+load loop on the given virtual address (for perf stat)\n"
++         "  --touch-iters      iterations for touch loop (default: 5000000; clamped)\n"
++         "  --touch-bank       pick VA from bank_id (0..15) produced by this run\n"
++         "  --touch-idx        index within that bank's vector (default: 0)\n",
+          argv0);
+  }
+***************
+*** 535,546 ****
+  int main(int argc, char **argv) {
+      uint64_t bytes = 256ULL * 1024 * 1024;
+      uint64_t step = 64;
+      uint64_t max_samples = 50000;
+      uint64_t print_per_bank = 64;
+  
+      bool do_validate = false;
+      int validate_bank = -1;     // -1 => best
+      uint64_t validate_idx = 0;
+      uint64_t validate_iters = 20000;
+      bool validate_all_imcs = false;
+--- 595,614 ----
+  int main(int argc, char **argv) {
+      uint64_t bytes = 256ULL * 1024 * 1024;
+      uint64_t step = 64;
+      uint64_t max_samples = 50000;
+      uint64_t print_per_bank = 64;
+  
+      bool do_validate = false;
+      int validate_bank = -1;     // -1 => best
+      uint64_t validate_idx = 0;
+      uint64_t validate_iters = 20000;
+      bool validate_all_imcs = false;
++
++     bool do_touch = false;
++     uint64_t touch_va = 0;
++     uint64_t touch_iters = 5000000;
++     int touch_bank = -1;
++     uint64_t touch_idx = 0;
+***************
+*** 547,573 ****
+      for (int i = 1; i < argc; i++) {
+          if (!strcmp(argv[i], "--bytes") && i+1 < argc) {
+              bytes = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--step") && i+1 < argc) {
+              step = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--max") && i+1 < argc) {
+              max_samples = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--print-per-bank") && i+1 < argc) {
+              print_per_bank = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--validate")) {
+              do_validate = true;
+          } else if (!strcmp(argv[i], "--validate-bank") && i+1 < argc) {
+              validate_bank = atoi(argv[++i]);
+          } else if (!strcmp(argv[i], "--validate-idx") && i+1 < argc) {
+              validate_idx = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--validate-iters") && i+1 < argc) {
+              validate_iters = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--validate-all-imcs")) {
+              validate_all_imcs = true;
+          } else {
+              usage(argv[0]);
+              return 2;
+          }
+      }
+--- 615,655 ----
+      for (int i = 1; i < argc; i++) {
+          if (!strcmp(argv[i], "--bytes") && i+1 < argc) {
+              bytes = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--step") && i+1 < argc) {
+              step = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--max") && i+1 < argc) {
+              max_samples = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--print-per-bank") && i+1 < argc) {
+              print_per_bank = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--validate")) {
+              do_validate = true;
+          } else if (!strcmp(argv[i], "--validate-bank") && i+1 < argc) {
+              validate_bank = atoi(argv[++i]);
+          } else if (!strcmp(argv[i], "--validate-idx") && i+1 < argc) {
+              validate_idx = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--validate-iters") && i+1 < argc) {
+              validate_iters = strtoull(argv[++i], NULL, 0);
+          } else if (!strcmp(argv[i], "--validate-all-imcs")) {
+              validate_all_imcs = true;
++         } else if (!strcmp(argv[i], "--touch-va") && i+1 < argc) {
++             do_touch = true;
++             touch_va = strtoull(argv[++i], NULL, 0);
++             touch_bank = -1;
++         } else if (!strcmp(argv[i], "--touch-iters") && i+1 < argc) {
++             touch_iters = strtoull(argv[++i], NULL, 0);
++         } else if (!strcmp(argv[i], "--touch-bank") && i+1 < argc) {
++             do_touch = true;
++             touch_bank = atoi(argv[++i]);
++         } else if (!strcmp(argv[i], "--touch-idx") && i+1 < argc) {
++             touch_idx = strtoull(argv[++i], NULL, 0);
+          } else {
+              usage(argv[0]);
+              return 2;
+          }
+      }
+***************
+*** 720,742 ****
+      if (do_validate) {
+          int b = (validate_bank >= 0) ? validate_bank : best;
+          if (b < 0 || b > 15) {
+              warnx("validate: invalid --validate-bank %d (must be 0..15)", b);
+              return 2;
+          }
+          if (banks[b].n == 0) {
+              warnx("validate: bank_id=%d has zero hits; choose another bank_id or increase --max/--bytes", b);
+              return 1;
+          }
+          if (validate_idx >= banks[b].n) {
+              warnx("validate: --validate-idx %" PRIu64 " out of range (bank has %zu entries)",
+                    validate_idx, banks[b].n);
+              return 1;
+          }
+  
+          validate_one_addr(&banks[b].v[validate_idx], validate_iters, validate_all_imcs);
+      }
+  
+      return 0;
+  }
+--- 802,855 ----
+      if (do_validate) {
+          int b = (validate_bank >= 0) ? validate_bank : best;
+          if (b < 0 || b > 15) {
+              warnx("validate: invalid --validate-bank %d (must be 0..15)", b);
+              return 2;
+          }
+          if (banks[b].n == 0) {
+              warnx("validate: bank_id=%d has zero hits; choose another bank_id or increase --max/--bytes", b);
+              return 1;
+          }
+          if (validate_idx >= banks[b].n) {
+              warnx("validate: --validate-idx %" PRIu64 " out of range (bank has %zu entries)",
+                    validate_idx, banks[b].n);
+              return 1;
+          }
+  
+          validate_one_addr(&banks[b].v[validate_idx], validate_iters, validate_all_imcs);
+      }
++
++     if (do_touch) {
++         uint64_t va = touch_va;
++         if (touch_bank >= 0) {
++             int b = touch_bank;
++             if (b < 0 || b > 15) {
++                 warnx("touch: invalid --touch-bank %d (must be 0..15)", b);
++                 return 2;
++             }
++             if (banks[b].n == 0) {
++                 warnx("touch: bank_id=%d has zero hits; choose another bank_id or increase --max/--bytes", b);
++                 return 1;
++             }
++             if (touch_idx >= banks[b].n) {
++                 warnx("touch: --touch-idx %" PRIu64 " out of range (bank has %zu entries)",
++                       touch_idx, banks[b].n);
++                 return 1;
++             }
++             va = banks[b].v[touch_idx].va;
++             printf("\nTouch selected from bank_id=%d idx=%" PRIu64 " => VA=0x%016" PRIx64 "\n", b, touch_idx, va);
++         }
++         // Basic guard: ensure VA is inside our allocation.
++         uint64_t base = (uint64_t)(uintptr_t)buf;
++         uint64_t end  = base + bytes;
++         if (va < base || va >= end) {
++             warnx("touch: VA=0x%016" PRIx64 " is not within allocation [%p, %p). Refuse to touch.",
++                   va, buf, (void *)(uintptr_t)end);
++             return 1;
++         }
++         touch_one_va(va, touch_iters);
++     }
+  
+      return 0;
+  }
