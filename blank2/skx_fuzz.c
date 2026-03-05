@@ -1091,19 +1091,47 @@ static void fuzz_bank(struct vec *bank, uint64_t fuzz_pairs, uint64_t fuzz_iters
     memset(buf, 0xFF, bytes);
     printf("\n=== FUZZ BANK %d (pairs=%" PRIu64 " iters=%" PRIu64 ") ctx=0x%016" PRIx64 " ===\n",
            filtered.v[0].bank_id, fuzz_pairs, fuzz_iters, best_ctx);
+    // Print filtered details before loop
+    printf("fuzz: filtered n=%zu (sorted by row/col)\n", filtered.n);
+    printf("fuzz: first 10 rows:\n");
+    for (size_t i = 0; i < 10 && i < filtered.n; i++) {
+        printf("fuzz: idx%zu row=%d\n", i, filtered.v[i].row);
+    }
+    if (filtered.n > 10) {
+        printf("fuzz: ...\n");
+        printf("fuzz: last 10 rows:\n");
+        for (size_t i = filtered.n - 10; i < filtered.n; i++) {
+            printf("fuzz: idx%zu row=%d\n", i, filtered.v[i].row);
+        }
+    }
     size_t attempted = 0;
+    uint64_t attempts = 0;
+    uint64_t max_attempts = fuzz_pairs * 100; // Limit retries to avoid infinite loop
+    printf("fuzz: starting loop (max_attempts=%" PRIu64 ")\n", max_attempts);
     while (attempted < fuzz_pairs && filtered.n >= 3) {
+        if (++attempts > max_attempts) {
+            printf("fuzz: exceeded max attempts %" PRIu64 ", giving up (possible lack of distinct row triples)\n", max_attempts);
+            break;
+        }
+        printf("fuzz: attempt %" PRIu64 " / %" PRIu64 "\n", attempts, max_attempts);
         // pick random index for victim (ensure neighbors exist)
         size_t idx = rand() % (filtered.n - 2) + 1; // middle-ish
+        printf("fuzz: picked idx=%zu (range 1 to %zu)\n", idx, filtered.n - 2);
         struct hit *agg1 = &filtered.v[idx - 1];
         struct hit *victim = &filtered.v[idx];
         struct hit *agg2 = &filtered.v[idx + 1];
-        if (agg1->row >= victim->row || agg2->row <= victim->row) continue; // ensure diff rows
+        printf("fuzz: rows: agg1=%d victim=%d agg2=%d\n", agg1->row, victim->row, agg2->row);
+        if (agg1->row >= victim->row || agg2->row <= victim->row) {
+            printf("fuzz: skipping, not distinct rows (need agg1 < victim < agg2)\n");
+            continue;
+        }
+        printf("fuzz: valid triple found, hammering...\n");
         hammer_simple(agg1->va, victim->va, agg2->va, fuzz_iters);
         int flips = check_flips(victim->va, 64); // check cacheline
         printf("fuzz result: victim VA=0x%016" PRIx64 " row=%d flips=%d\n", victim->va, victim->row, flips);
         if (flips > 0) printf("SUCCESS: bit flips detected!\n");
         attempted++;
+        printf("fuzz: successful attempted %zu / %" PRIu64 "\n", attempted, fuzz_pairs);
     }
     free(filtered.v);
     printf("=== END FUZZ ===\n");
