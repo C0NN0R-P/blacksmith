@@ -3,7 +3,6 @@
 // Build: gcc -O2 -Wall -Wextra -std=c11 -o skx_fuzz skx_fuzz.c
 // Run: sudo ./skx_fuzz --bytes 268435456 --step 64 --max 2000 --fuzz-pairs 64
 
-/* This section includes all necessary header files for the program. */
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
@@ -21,8 +20,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <time.h> // for rand seeding
+#include <stdint.h> // for PRIu64
 
-/* Define macros for bit manipulation if not already defined. */
 #ifndef BIT_ULL
 #define BIT_ULL(n) (1ULL << (n))
 #endif
@@ -38,19 +37,18 @@
 #define MASK26 0x3FFFFFFULL
 #define MASK29 0x1FFFFFFFULL
 
-/* Global log file pointer for logging. Initialized to NULL. */
+// Global log file and log_printf
 static FILE *log_fp = NULL;
-
-/* Function to log messages to the log file if it's open. */
 static void log_printf(const char *fmt, ...) {
-    if (log_fp == NULL) return;
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(log_fp, fmt, ap);
-    va_end(ap);
+    if (log_fp) {
+        va_list ap;
+        va_start(ap, fmt);
+        vfprintf(log_fp, fmt, ap);
+        va_end(ap);
+    }
 }
 
-/* Function to handle fatal errors and exit the program. */
+// ---------- minimal logging ----------
 static void die(const char *fmt, ...) __attribute__((noreturn));
 static void die(const char *fmt, ...) {
     va_list ap;
@@ -60,8 +58,6 @@ static void die(const char *fmt, ...) {
     fputc('\n', stderr);
     exit(1);
 }
-
-/* Function to print warnings to stderr. */
 static void warnx(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -69,8 +65,6 @@ static void warnx(const char *fmt, ...) {
     va_end(ap);
     fputc('\n', stderr);
 }
-
-/* Inline functions for cache and memory barriers on x86. */
 // ---------- cacheline touch helper (for perf bank validation) ----------
 static inline void do_clflush(const void *p) {
 #if defined(__x86_64__) || defined(__i386__)
@@ -89,8 +83,6 @@ static inline void do_lfence(void) {
     __asm__ __volatile__("lfence" ::: "memory");
 #endif
 }
-
-/* Function to perform repeated cacheline touches on a virtual address to simulate hammering. */
 static void touch_one_va(uint64_t va, uint64_t iters) {
     // Safety clamp: avoid accidental “hammer the box to death”.
     if (iters < 1000) iters = 1000;

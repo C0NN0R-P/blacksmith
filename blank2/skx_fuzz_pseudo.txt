@@ -1,0 +1,1017 @@
+Block 1: Includes and Preprocessor Directives
+
+Line Range: 1-17
+Description: Includes necessary system headers for file I/O, memory management, PCI access, and other utilities. Defines _GNU_SOURCE for GNU extensions.
+Pseudocode:textINCLUDE system headers for error handling, file operations, integer types, boolean, stdio, stdlib, string, memory mapping, stats, types, dirent, time
+DEFINE _GNU_SOURCE to enable GNU-specific features
+
+Block 2: Macro Definitions for Bit Manipulation
+
+Line Range: 19-28
+Description: Defines macros for bit operations like setting bits, generating masks, and extracting bit fields. Also defines constants for IMC, channels, DIMMs, and masks.
+Pseudocode:textIF BIT_ULL NOT DEFINED:
+  DEFINE BIT_ULL(n) as 1 shifted left by n (for unsigned long long)
+IF GENMASK_ULL NOT DEFINED:
+  DEFINE GENMASK_ULL(h, l) as mask from bit l to h (inclusive)
+DEFINE GET_BITFIELD(v, lo, hi) as extract bits lo to hi from v
+DEFINE NUM_IMC as 2
+DEFINE NUM_CHANNELS as 3
+DEFINE NUM_DIMMS as 2
+DEFINE MASK26 as 0x3FFFFFFULL
+DEFINE MASK29 as 0x1FFFFFFFULL
+
+Block 3: Global Log File and Log Function
+
+Line Range: 30-36
+Description: Declares a global FILE pointer for logging and a function to print formatted messages to it if open.
+Pseudocode:textDECLARE global log_fp as FILE pointer, initialized to NULL
+FUNCTION log_printf(fmt, ...):
+  IF log_fp is NULL:
+    RETURN (do nothing)
+  ELSE:
+    START variadic arguments ap
+    PRINT formatted fmt with ap to log_fp
+    END variadic arguments
+
+Block 4: Error and Warning Handling Functions
+
+Line Range: 38-58
+Description: Defines functions for fatal errors (die) and warnings (warnx), both printing to stderr.
+Pseudocode:textFUNCTION die(fmt, ...): // fatal error, exits program
+  START variadic arguments ap
+  PRINT formatted fmt with ap to stderr
+  END variadic arguments
+  PRINT newline to stderr
+  EXIT program with code 1
+
+FUNCTION warnx(fmt, ...): // print warning
+  START variadic arguments ap
+  PRINT formatted fmt with ap to stderr
+  END variadic arguments
+  PRINT newline to stderr
+
+Block 5: Inline Assembly for Cache and Memory Operations
+
+Line Range: 60-82
+Description: Inline functions for cache flush (clflush), memory fence (mfence), and load fence (lfence) on x86 architectures.
+Pseudocode:textINLINE FUNCTION do_clflush(p):
+  IF x86 architecture:
+    ASSEMBLY: clflush memory at p
+  ELSE:
+    DO NOTHING (ignore p)
+
+INLINE FUNCTION do_mfence():
+  IF x86 architecture:
+    ASSEMBLY: mfence (memory fence)
+  ELSE:
+    DO NOTHING
+
+INLINE FUNCTION do_lfence():
+  IF x86 architecture:
+    ASSEMBLY: lfence (load fence)
+  ELSE:
+    DO NOTHING
+
+Block 6: Touch Function for Hammering Address
+
+Line Range: 84-111
+Description: Function to repeatedly flush and load a memory address to simulate hammering, with safety clamps on iterations and logging.
+Pseudocode:textFUNCTION touch_one_va(va, iters):
+  IF iters < 1000:
+    SET iters to 1000
+  IF iters > 50000000:
+    WARN and clamp iters to 50000000
+  SET ptr to volatile uint8 at va
+  ACCESS *ptr to ensure mapping
+  PRINT and LOG "TOUCH LOOP" start message with va and iters
+  INITIALIZE sink to 0
+  FOR i from 0 to iters - 1:
+    CLFLUSH ptr
+    MFENCE
+    LFENCE
+    ADD *ptr to sink
+  IF sink is all 1s:
+    PRINT sink value
+  PRINT and LOG "TOUCH LOOP DONE" message
+
+Block 7: Sysfs Helper Functions
+
+Line Range: 113-142
+Description: Functions to read u32 from files, pread from fd, open PCI config files, parse BDF strings, and compute PCI devfn.
+Pseudocode:textFUNCTION read_u32_file(path, out):
+  OPEN file at path for read
+  IF open fails:
+    RETURN -errno
+  READ up to 63 bytes into buf
+  CLOSE file
+  IF read fails:
+    RETURN -EIO
+  NULL-terminate buf
+  PARSE buf as unsigned long to v
+  SET *out to (u32)v
+  RETURN 0
+
+FUNCTION pread_u32(fd, off, out):
+  INITIALIZE v to 0
+  PREAD 4 bytes into v from fd at off
+  IF read fails:
+    RETURN -errno
+  SET *out to v
+  RETURN 0
+
+FUNCTION open_pci_config(bdf, out_path, out_sz):
+  FORMAT out_path as "/sys/bus/pci/devices/<bdf>/config"
+  OPEN file at out_path for read
+  IF open fails:
+    RETURN -errno
+  RETURN fd
+
+FUNCTION parse_bdf(name, seg, bus, dev, fn):
+  SCAN name as "%x:%x:%x.%x" into seg, bus, dev, fn
+  IF not exactly 4 items:
+    RETURN -1
+  RETURN 0
+
+FUNCTION pci_devfn(dev, fn):
+  RETURN (u8)((dev << 3) | (fn & 7))
+
+Block 8: SKX Data Structures
+
+Line Range: 144-190
+Description: Defines structs for DIMM, channel, IMC, device, and decoded address.
+Pseudocode:textSTRUCT skx_dimm:
+  FIELDS: close_pg (u8), bank_xor_enable (u8), fine_grain_bank (u8), rowbits (u8), colbits (u8)
+
+STRUCT skx_channel:
+  FIELDS: bdf (char[32]), cfg_fd (int), dimms (skx_dimm[NUM_DIMMS])
+
+STRUCT skx_imc:
+  FIELDS: mc (u8), lmc (u8), src_id (u8), node_id (u8), chan (skx_channel[NUM_CHANNELS])
+
+STRUCT skx_dev:
+  FIELDS: next (skx_dev*), busmap (u8[4]), sad_all_bdf (char[32]), util_all_bdf (char[32]), sad_all_fd (int), util_all_fd (int), mcroute (u32), imc (skx_imc[NUM_IMC])
+
+STRUCT decoded_addr:
+  FIELDS: dev (skx_dev*), addr (u64), socket (int), imc (int), channel (int), chan_addr (u64), sktways (int), chanways (int), dimm (int), rank (int), channel_rank (int), rank_address (u64), row (int), column (int), bank_address (int), bank_group (int)
+
+Block 9: Global Variables for TOLM/TOHM
+
+Line Range: 192-193
+Description: Global variables for Top of Low Memory and Top of High Memory.
+Pseudocode:textDECLARE global skx_tolm as u64, initialized to 0
+DECLARE global skx_tohm as u64, initialized to 0
+
+Block 10: PCI Scanning and Parsing Functions
+
+Line Range: 195-250
+Description: Functions to check if path is directory, define PCI entry struct, scan PCI devices from sysfs, find first matching device, global skx_devs and num_sockets.
+Pseudocode:textFUNCTION is_dir(path):
+  STAT path into st
+  IF stat fails:
+    RETURN 0
+  RETURN if st is directory
+
+STRUCT pci_ent:
+  FIELDS: bdf (char[32]), vendor (u16), device (u16), bus (u8), devfn (u8)
+
+FUNCTION scan_pci(out_n):
+  OPEN dir "/sys/bus/pci/devices"
+  IF open fails:
+    DIE with error
+  INITIALIZE arr with capacity 256
+  INITIALIZE n to 0
+  WHILE reading dir entry de:
+    IF de name starts with '.':
+      CONTINUE
+    FORMAT path as root/de_name
+    IF not directory:
+      CONTINUE
+    READ vendor and device from path/vendor and path/device
+    IF read fails:
+      CONTINUE
+    PARSE bdf from de_name into seg, bus, dev, fn
+    IF parse fails:
+      CONTINUE
+    IF n == cap:
+      DOUBLE cap and REALLOC arr
+    SET arr[n].bdf to de_name
+    SET arr[n].vendor, device, bus, devfn
+    INCREMENT n
+  CLOSE dir
+  SET *out_n to n
+  RETURN arr
+
+FUNCTION find_first(arr, n, vendor, device):
+  FOR i from 0 to n-1:
+    IF arr[i] matches vendor and device:
+      RETURN &arr[i]
+  RETURN NULL
+
+DECLARE global skx_devs as skx_dev*, initialized to NULL
+DECLARE global skx_num_sockets as int, initialized to 0
+
+Block 11: PCI Device Mapping and Configuration Functions
+
+Line Range: 252-353
+Description: Functions to get device by bus, get TOLM/TOHM from PCI, get bus mappings, attach units to sockets, get source/node ID, get all memory units and open configs.
+Pseudocode:textFUNCTION get_skx_dev_by_bus(bus, idx):
+  FOR d in skx_devs linked list:
+    IF d.busmap[idx] == bus:
+      RETURN d
+  RETURN NULL
+
+FUNCTION skx_get_hi_lo_from_2034(ents, nents):
+  FIND first 0x8086:0x2034 device
+  IF not found:
+    RETURN -ENOENT
+  OPEN config
+  IF open fails:
+    RETURN error
+  PREAD regs at 0xD0, 0xD4, 0xD8
+  IF any pread fails:
+    CLOSE fd
+    RETURN -EIO
+  SET skx_tolm and skx_tohm from regs
+  CLOSE fd
+  RETURN 0
+
+FUNCTION get_all_bus_mappings(ents, nents):
+  FOR each ent in ents:
+    IF not 0x8086:0x2016:
+      CONTINUE
+    OPEN config
+    IF open fails:
+      RETURN error
+    PREAD reg at 0xCC
+    CLOSE fd
+    IF read fails:
+      CONTINUE
+    ALLOC new d (skx_dev)
+    SET d.busmap from bit fields in reg
+    INITIALIZE fds to -1
+    LINK d to skx_devs
+    INCREMENT skx_num_sockets
+  RETURN skx_num_sockets
+
+FUNCTION attach_unit_to_socket(d, bdf, did, devfn, out_mc_idx, out_ch_idx):
+  DETERMINE mc and ch based on did and devfn
+  IF invalid:
+    RETURN -1
+  SET d's bdf for SAD_ALL or UTIL_ALL if matching did
+  ELSE:
+    SET d.imc[mc].chan[ch].bdf to bdf
+    SET out_mc_idx and out_ch_idx if provided
+  RETURN 0
+
+FUNCTION get_src_id(d, out):
+  PREAD reg at 0xF0 from util_all_fd
+  IF fails:
+    RETURN -EIO
+  SET *out to bits 12-14 of reg
+  RETURN 0
+
+FUNCTION get_node_id(d, out):
+  PREAD reg at 0xF4 from util_all_fd
+  IF fails:
+    RETURN -EIO
+  SET *out to bits 0-2 of reg
+  RETURN 0
+
+FUNCTION get_all_munits_and_open(ents, nents):
+  FOR each ent in ents:
+    IF not Intel:
+      CONTINUE
+    IF did not relevant (2054,2055,2040,2044,2048,208e):
+      CONTINUE
+    DETERMINE busidx based on did
+    GET d by bus and busidx
+    IF no d:
+      CONTINUE
+    IF did 208e:
+      PREAD reg at 0xB4
+      IF valid and non-zero:
+        SET or check d.mcroute
+      CLOSE
+      CONTINUE
+    ATTACH unit to socket d
+  FOR each d in skx_devs:
+    IF missing bdf:
+      WARN
+      CONTINUE
+    OPEN sad_all and util_all configs
+    IF open fails:
+      WARN
+    FOR each mc and ch:
+      IF bdf present:
+        OPEN channel config
+        IF fails:
+          WARN
+    IF util_all open:
+      GET src_id and node_id
+      SET for all imc in d
+  RETURN 0
+
+Block 12: DIMM Parameter Loading
+
+Line Range: 355-397
+Description: Functions to extract DIMM attributes and load DIMM parameters from PCI configs.
+Pseudocode:textFUNCTION get_dimm_attr(reg, lobit, hibit, add, minval, maxval):
+  EXTRACT val from lobit to hibit in reg
+  IF val out of min-max:
+    RETURN -EINVAL
+  RETURN val + add
+
+MACRO IS_DIMM_PRESENT(mtr) as bit 15 of mtr
+
+FUNCTION numrank(reg):
+  RETURN get_dimm_attr(reg, 12, 13, 0, 1, 2)
+
+FUNCTION numrow(reg):
+  RETURN get_dimm_attr(reg, 2, 4, 12, 1, 6)
+
+FUNCTION numcol(reg):
+  RETURN get_dimm_attr(reg, 0, 1, 10, 0, 2)
+
+FUNCTION skx_load_dimm_params():
+  FOR each d in skx_devs:
+    FOR each mc in 0..NUM_IMC-1:
+      FOR each ch in 0..NUM_CHANNELS-1:
+        GET fd = d.imc[mc].chan[ch].cfg_fd
+        IF fd invalid:
+          CONTINUE
+        PREAD amap at 0x8C
+        IF fails:
+          CONTINUE
+        FOR j in 0..NUM_DIMMS-1:
+          PREAD mtr at 0x80 + 4*j
+          IF fails:
+            CONTINUE
+          IF not present:
+            CONTINUE
+          GET ranks, rows, cols from mtr
+          SET sd = d.imc[mc].chan[ch].dimms[j]
+          SET sd.close_pg from bit 0 of mtr
+          SET sd.bank_xor_enable from bit 9 of mtr
+          SET sd.fine_grain_bank from bit 0 of amap
+          SET sd.rowbits to rows
+          SET sd.colbits to cols
+  RETURN 0
+
+Block 13: Decode Logic for SAD (System Address Decoder)
+
+Line Range: 399-463
+Description: Functions and macros for SAD decoding, including getting SAD/ILV regs, bit field macros, and the SAD decode function.
+Pseudocode:textDEFINE SKX_MAX_SAD as 24
+
+FUNCTION SKX_GET_SAD(d, i, sad):
+  RETURN pread_u32(d.sad_all_fd, 0x60 + 8*i, sad)
+
+FUNCTION SKX_GET_ILV(d, i, ilv):
+  RETURN pread_u32(d.sad_all_fd, 0x64 + 8*i, ilv)
+
+MACRO SKX_SAD_MOD3MODE(sad) as bits 30-31 of sad
+MACRO SKX_SAD_MOD3(sad) as bit 27 of sad
+MACRO SKX_SAD_LIMIT(sad) as (bits 7-26 of sad << 26) | MASK26
+MACRO SKX_SAD_MOD3ASMOD2(sad) as bits 5-6 of sad
+MACRO SKX_SAD_ATTR(sad) as bits 3-4 of sad
+MACRO SKX_SAD_INTERLEAVE(sad) as bits 1-2 of sad
+MACRO SKX_SAD_ENABLE(sad) as bit 0 of sad
+MACRO SKX_ILV_REMOTE(tgt) as (tgt & 8 == 0)
+MACRO SKX_ILV_TARGET(tgt) as tgt & 7
+
+FUNCTION skx_sad_decode(res):
+  GET d0 = first skx_dev
+  IF no d0:
+    RETURN false
+  SET d = d0
+  GET addr = res.addr
+  IF addr out of range (tohm or tolm gap):
+    WARN
+    RETURN false
+  SET remote = 0
+RESTART:
+  SET prev_limit = 0
+  FOR i in 0..SKX_MAX_SAD-1:
+    GET sad from d, i
+    IF fails:
+      CONTINUE
+    GET limit from sad
+    IF enabled:
+      IF addr in prev_limit to limit:
+        GET ilv from d, i
+        IF fails:
+          RETURN false
+        DETERMINE idx from interleave mode (bits 6-8, 8-10, 12-14, 30-32)
+        GET tgt from ilv at 4*idx to 4*idx+3
+        IF remote tgt:
+          IF already remote:
+            RETURN false
+          SET remote = 1
+          GET want = tgt target
+          FIND d with imc[0].src_id == want
+          IF found:
+            SET d to that
+            GOTO RESTART
+          RETURN false
+        DETERMINE lchan and shift based on mod3, mod3mode, mod3asmod2
+        SET res.dev = d
+        SET res.socket = d.imc[0].src_id
+        IF no mcroute:
+          RETURN false
+        SET res.imc from mcroute bits for lchan
+        SET res.channel from mcroute bits for lchan
+        RETURN true
+    SET prev_limit = limit + 1
+  RETURN false
+
+Block 14: TAD (Target Address Decoder) Functions
+
+Line Range: 465-513
+Description: Functions and macros for TAD decoding.
+Pseudocode:textDEFINE SKX_MAX_TAD as 8
+
+FUNCTION SKX_GET_TADBASE(d, mc, i, reg):
+  GET fd = d.imc[mc].chan[0].cfg_fd
+  IF fd invalid:
+    RETURN -ENOENT
+  RETURN pread_u32(fd, 0x850 + 4*i, reg)
+
+FUNCTION SKX_GET_TADWAYNESS(d, mc, i, reg):
+  GET fd = d.imc[mc].chan[0].cfg_fd
+  IF fd invalid:
+    RETURN -ENOENT
+  RETURN pread_u32(fd, 0x880 + 4*i, reg)
+
+FUNCTION SKX_GET_TADCHNILVOFFSET(d, mc, ch, i, reg):
+  GET fd = d.imc[mc].chan[ch].cfg_fd
+  IF fd invalid:
+    RETURN -ENOENT
+  RETURN pread_u32(fd, 0x90 + 4*i, reg)
+
+MACRO SKX_TAD_BASE(b) as (bits 12-31 of b << 26)
+MACRO SKX_TAD_SKT_GRAN(b) as bits 4-5 of b
+MACRO SKX_TAD_CHN_GRAN(b) as bits 6-7 of b
+MACRO SKX_TAD_LIMIT(b) as (bits 12-31 of b << 26) | MASK26
+MACRO SKX_TAD_OFFSET(b) as (bits 4-23 of b << 26)
+MACRO SKX_TAD_SKTWAYS(b) as 1 << bits 10-11 of b
+MACRO SKX_TAD_CHNWAYS(b) as bits 8-9 of b + 1
+
+DEFINE skx_granularity array as {6, 8, 12, 30}
+
+FUNCTION skx_do_interleave(addr, shift, ways, lowbits):
+  SHIFT addr right by shift
+  DIVIDE addr by ways
+  SHIFT addr left by shift
+  RETURN addr OR (lowbits & mask for shift-1 to 0)
+
+FUNCTION skx_tad_decode(res):
+  FOR i in 0..SKX_MAX_TAD-1:
+    GET base from res.dev, res.imc, i
+    IF fails:
+      CONTINUE
+    GET wayness from res.dev, res.imc, i
+    IF fails:
+      CONTINUE
+    IF addr in TAD_BASE to TAD_LIMIT:
+      SET res.sktways from wayness
+      SET res.chanways from wayness
+      GET skt_interleave_bit from granularity[TAD_SKT_GRAN(base)]
+      GET chn_interleave_bit from granularity[TAD_CHN_GRAN(base)]
+      GET chnilvoffset from res.dev, res.imc, res.channel, i
+      IF fails:
+        RETURN false
+      SET channel_addr = res.addr - TAD_OFFSET(chnilvoffset)
+      IF chanways == 3 and skt > chn bit:
+        INTERLEAVE channel_addr with chn bit, chanways, channel_addr
+        INTERLEAVE channel_addr with skt bit, sktways, channel_addr
+      ELSE:
+        INTERLEAVE channel_addr with skt bit, sktways, res.addr
+        INTERLEAVE channel_addr with chn bit, chanways, res.addr
+      SET res.chan_addr = channel_addr
+      RETURN true
+  RETURN false
+
+Block 15: RIR (Rank Interleave Decoder) Functions
+
+Line Range: 515-554
+Description: Functions and macros for RIR decoding.
+Pseudocode:textDEFINE SKX_MAX_RIR as 4
+
+FUNCTION SKX_GET_RIRWAYNESS(d, mc, ch, i, reg):
+  GET fd = d.imc[mc].chan[ch].cfg_fd
+  IF fd invalid:
+    RETURN -ENOENT
+  RETURN pread_u32(fd, 0x108 + 4*i, reg)
+
+FUNCTION SKX_GET_RIRILV(d, mc, ch, idx, i, reg):
+  GET fd = d.imc[mc].chan[ch].cfg_fd
+  IF fd invalid:
+    RETURN -ENOENT
+  RETURN pread_u32(fd, 0x120 + 16*idx + 4*i, reg)
+
+MACRO SKX_RIR_VALID(b) as bit 31 of b
+MACRO SKX_RIR_LIMIT(b) as (bits 1-11 of b << 29) | MASK29
+MACRO SKX_RIR_WAYS(b) as 1 << bits 28-29 of b
+MACRO SKX_RIR_CHAN_RANK(b) as bits 16-19 of b
+MACRO SKX_RIR_OFFSET(b) as (bits 2-15 of b << 26)
+
+FUNCTION skx_rir_decode(res):
+  GET dimm0 = res.dev.imc[res.imc].chan[res.channel].dimms[0]
+  SET shift = 6 if dimm0.close_pg else 13
+  SET prev_limit = 0
+  FOR i in 0..SKX_MAX_RIR-1:
+    GET rirway from res.dev, res.imc, res.channel, i
+    IF fails:
+      CONTINUE
+    GET limit from rirway
+    IF valid:
+      IF chan_addr in prev_limit to limit:
+        SET rank_addr = chan_addr >> shift / RIR_WAYS << shift | low bits of chan_addr
+        SET idx = (chan_addr >> shift) % RIR_WAYS
+        GET rirlv from res.dev, res.imc, res.channel, idx, i
+        IF fails:
+          RETURN false
+        SET res.rank_address = rank_addr - RIR_OFFSET(rirlv)
+        SET chan_rank = RIR_CHAN_RANK(rirlv)
+        SET res.channel_rank = chan_rank
+        SET res.dimm = chan_rank / 4
+        SET res.rank = chan_rank % 4
+        RETURN true
+    SET prev_limit = limit
+  RETURN false
+
+Block 16: MAD (Memory Address Decoder) Tables and Functions
+
+Line Range: 556-604
+Description: Tables for row/column bits and functions for bank bits and MAD decode.
+Pseudocode:textDEFINE skx_close_row array as {15,16,17,18,20,21,22,28,10,11,12,13,29,30,31,32,33}
+DEFINE skx_close_column array as {3,4,5,14,19,23,24,25,26,27}
+DEFINE skx_open_row array as {14,15,16,20,28,21,22,23,24,25,26,27,29,30,31,32,33}
+DEFINE skx_open_column array as {3,4,5,6,7,8,9,10,11,12}
+DEFINE skx_open_fine_column array as {3,4,5,7,8,9,10,11,12,13}
+
+FUNCTION skx_bits(addr, nbits, bits):
+  INITIALIZE res = 0
+  FOR i in 0..nbits-1:
+    SET bit = (addr >> bits[i]) & 1
+    SET res |= bit << i
+  RETURN res
+
+FUNCTION skx_bank_bits(addr, b0, b1, do_xor, x0, x1):
+  SET ret = bit b0 of addr | (bit b1 of addr << 1)
+  IF do_xor:
+    SET xor_val = bit x0 of addr | (bit x1 of addr << 1)
+    SET ret ^= xor_val
+  RETURN ret
+
+FUNCTION skx_mad_decode(r):
+  GET dimm = r.dev.imc[r.imc].chan[r.channel].dimms[r.dimm]
+  SET bg0 = 6 if dimm.fine_grain_bank else 13
+  IF dimm.close_pg:
+    SET r.row = skx_bits(r.rank_address, dimm.rowbits, skx_close_row)
+    SET r.column = skx_bits(r.rank_address, dimm.colbits, skx_close_column)
+    SET r.column |= 0x400
+    SET r.bank_address = skx_bank_bits(r.rank_address, 8, 9, dimm.bank_xor_enable, 22, 28)
+    SET r.bank_group = skx_bank_bits(r.rank_address, 6, 7, dimm.bank_xor_enable, 20, 21)
+  ELSE:
+    SET r.row = skx_bits(r.rank_address, dimm.rowbits, skx_open_row)
+    IF dimm.fine_grain_bank:
+      SET r.column = skx_bits(r.rank_address, dimm.colbits, skx_open_fine_column)
+    ELSE:
+      SET r.column = skx_bits(r.rank_address, dimm.colbits, skx_open_column)
+    SET r.bank_address = skx_bank_bits(r.rank_address, 18, 19, dimm.bank_xor_enable, 22, 23)
+    SET r.bank_group = skx_bank_bits(r.rank_address, bg0, 17, dimm.bank_xor_enable, 20, 21)
+  MASK r.row to (1 << dimm.rowbits) - 1
+  RETURN true
+
+Block 17: Full Decode Function
+
+Line Range: 606-609
+Description: Combines SAD, TAD, RIR, MAD decoders.
+Pseudocode:textFUNCTION skx_decode(res):
+  RETURN skx_sad_decode(res) AND skx_tad_decode(res) AND skx_rir_decode(res) AND skx_mad_decode(res)
+
+Block 18: VA to PA Conversion
+
+Line Range: 611-632
+Description: Function to get physical address from virtual via pagemap.
+Pseudocode:textFUNCTION va_to_pa(va, pa_out):
+  OPEN "/proc/self/pagemap" for read
+  IF fails:
+    RETURN -errno
+  SET page_sz = 4096
+  SET vpn = va / page_sz
+  SET off = vpn * 8
+  PREAD 8 bytes into entry at off
+  CLOSE fd
+  IF read fails:
+    RETURN -EIO
+  IF not present (bit 63 == 0):
+    RETURN -ENOENT
+  SET pfn = entry & mask 0-54
+  IF pfn == 0:
+    RETURN -EIO
+  SET pa = pfn * page_sz + va % page_sz
+  SET *pa_out = pa
+  RETURN 0
+
+Block 19: Sweep and Binning Structures
+
+Line Range: 634-645
+Description: Structs for hit (decoded address info) and vec (dynamic array).
+Pseudocode:textSTRUCT hit:
+  FIELDS: va (u64), pa (u64), bank_id (int), bg (int), bank (int), row (int), col (int), socket (int), imc (int), channel (int), dimm (int), rank (int)
+
+STRUCT vec:
+  FIELDS: v (hit*), n (size_t), cap (size_t)
+
+Block 20: Print and Perf Suggestion Functions
+
+Line Range: 647-682
+Description: Functions to print hit info and suggest perf commands for bank monitoring.
+Pseudocode:textFUNCTION print_hit(h, tag):
+  IF tag:
+    PRINT tag
+  PRINT formatted VA, PA, s, imc, ch, d, r, bg, ba, bank_id, row, col from h
+
+FUNCTION suggest_perf_for_hit(h):
+  IF rank or bank_id or bg out of range:
+    PRINT hint: out of range, cannot suggest
+    RETURN
+  COMPUTE rd_evt = 0xB0 + rank
+  COMPUTE wr_evt = 0xB8 + rank
+  SET bank_um = bank_id
+  SET bg_um = 0x11 + bg
+  PRINT perf hint messages with events and umasks
+
+Block 21: Decode Single VA to Hit
+
+Line Range: 684-698
+Description: Function to decode a single VA/PA to hit struct.
+Pseudocode:textFUNCTION decode_one_va_to_hit(va, pa, out):
+  INITIALIZE decoded_addr r to zero
+  SET r.addr = pa
+  IF not skx_decode(r):
+    RETURN false
+  SET out.va = va
+  SET out.pa = pa
+  SET out.socket, imc, channel, dimm, rank, row, col, bg, bank from r
+  SET out.bank_id = bg * 4 + bank
+  RETURN true
+
+Block 22: Vector Push Function
+
+Line Range: 700-708
+Description: Function to add hit to dynamic vector.
+Pseudocode:textFUNCTION vec_push(x, h):
+  IF x.n == x.cap:
+    IF cap == 0:
+      SET cap to 256
+    ELSE:
+      DOUBLE cap
+    REALLOC x.v to cap * sizeof(hit)
+    IF fails:
+      DIE oom
+  SET x.v[x.n] = h
+  INCREMENT x.n
+
+Block 23: Usage Function
+
+Line Range: 710-741
+Description: Prints program usage to stderr.
+Pseudocode:textFUNCTION usage(argv0):
+  PRINT formatted usage message with all options and defaults to stderr
+
+Block 24: RDTSC and CLFLUSH Inline Functions
+
+Line Range: 743-755
+Description: Inline functions for ordered RDTSC and CLFLUSH one.
+Pseudocode:textINLINE FUNCTION rdtsc_ordered():
+  ASSEMBLY: lfence then rdtsc
+  RETURN combined lo and hi as u64
+
+INLINE FUNCTION clflush_one(p):
+  ASSEMBLY: clflush memory at p
+
+Block 25: Measure Pair Cycles Function
+
+Line Range: 757-775
+Description: Function to measure cycles for flushing and loading two addresses.
+Pseudocode:textFUNCTION measure_pair_cycles(a, b, iters):
+  INITIALIZE sink = 0
+  INITIALIZE total = 0
+  FOR i in 0..iters-1:
+    CLFLUSH a
+    CLFLUSH b
+    MFENCE
+    GET t0 = rdtsc_ordered
+    XOR sink with *a
+    XOR sink with *b
+    GET t1 = rdtsc_ordered
+    ADD t1 - t0 to total
+  IF sink == 0xFF:
+    PRINT to stderr newline
+  RETURN total / iters as double
+
+Block 26: Blacksmith Output Helpers
+
+Line Range: 777-879
+Description: Functions for ensuring directory, getting context key, comparisons, most common context, and writing Blacksmith outputs.
+Pseudocode:textFUNCTION ensure_dir(dir):
+  IF dir empty:
+    RETURN -1
+  MKDIR dir with 0755
+  IF success or EEXIST:
+    RETURN 0
+  RETURN -1
+
+FUNCTION ctx_key(h):
+  PACK socket<<32, imc<<24, channel<<16, dimm<<8, rank into u64
+  RETURN key
+
+FUNCTION cmp_u64(a, b):
+  RETURN (x > y) - (x < y) where x=*a, y=*b
+
+FUNCTION cmp_hit_row_col(a, b):
+  COMPARE row, then col, then va
+  RETURN comparison result
+
+FUNCTION most_common_ctx(v):
+  IF v.n == 0:
+    RETURN 0
+  ALLOC keys array of size v.n
+  IF alloc fails:
+    RETURN 0
+  FILL keys with ctx_key for each v.v[i]
+  QSORT keys with cmp_u64
+  FIND most common key with count
+  FREE keys
+  RETURN best key
+
+FUNCTION write_blacksmith_outputs(dir, banks, per_bank, pairs_per_bank):
+  IF no dir:
+    RETURN
+  ENSURE dir
+  IF fails:
+    PRINT error
+    RETURN
+  FOR b in 0..15:
+    GET v = banks[b]
+    IF v.n == 0:
+      CONTINUE
+    GET best_ctx = most_common_ctx(v)
+    ALLOC tmp array of size v.n
+    IF fails:
+      CONTINUE
+    FILL tmp with hits where ctx_key == best_ctx
+    IF tn == 0:
+      FREE tmp
+      CONTINUE
+    QSORT tmp by row_col
+    FORMAT paths for csv, va.txt, pairs.txt
+    OPEN ff, fv, fp for write
+    IF any open fails:
+      PRINT error
+      CLOSE open files
+      FREE tmp
+      CONTINUE
+    PRINT csv header to ff
+    WRITE up to per_bank unique rows to ff and fv
+    WRITE pairs to fp using first as anchor
+    CLOSE ff, fv, fp
+    FREE tmp
+
+Block 27: Dump Bank Files Function
+
+Line Range: 881-909
+Description: Function to dump bank info to files.
+Pseudocode:textFUNCTION dump_bank_files(outdir, banks):
+  MKDIR outdir if not exist
+  IF fails and not EEXIST:
+    DIE with error
+  FOR b in 0..15:
+    FORMAT path as outdir/bank_%02d.txt
+    OPEN f for write
+    IF fails:
+      DIE with error
+    PRINT header with bank_id, bg, ba, n
+    PRINT columns header
+    FOR each hit in banks[b]:
+      PRINT formatted line
+    CLOSE f
+  PRINT dumped message
+
+Block 28: Timing Validation Function
+
+Line Range: 911-954
+Description: Function to validate bank timing by measuring cycles.
+Pseudocode:textFUNCTION timing_validate_bank(banks, bank_id, iters, max_pairs):
+  IF bank_id out of 0-15:
+    WARN invalid
+    RETURN
+  IF banks[bank_id].n < 2:
+    WARN too few hits
+    RETURN
+  GET ref = first hit in bank_id
+  GET ref context (s, imc, ch, d, r, row)
+  PRINT validation start message
+  PRINT fixed context
+  PRINT reference VA/PA/row/col
+  FOR b in 0..15:
+    INITIALIZE n=0, sum=0, min=large, max=0
+    FOR i in 0..banks[b].n-1 and n < max_pairs:
+      GET h = banks[b].v[i]
+      IF h context not match ref:
+        CONTINUE
+      IF h.row == ref_row:
+        CONTINUE
+      GET cyc = measure_pair_cycles(ref.va, h.va, iters)
+      ADD cyc to sum
+      UPDATE min and max
+      INCREMENT n
+    IF n == 0:
+      PRINT bank b: n=0
+    ELSE:
+      PRINT bank b: n, avg, min, max, mark if b == bank_id
+  PRINT validation end message
+
+Block 29: Hammer Simple Function
+
+Line Range: 956-1053
+Description: Function to perform hammering in different modes with progress logging.
+Pseudocode:textFUNCTION hammer_simple(agg1_va, victim_va, agg2_va, iters, mode):
+  CLAMP iters to max 10M
+  GET agg1, agg2 pointers from va
+  LOG hammering start with params
+  INITIALIZE sink = 0
+  COMPUTE progress_step = iters / 100 or 1
+  SET multi_hammer = 5
+  IF mode "one-sided":
+    FOR i in 0..iters-1:
+      FOR m in 0..4:
+        ADD *agg1 to sink
+        CLFLUSH agg1
+      MFENCE
+      IF progress:
+        COMPUTE percent, pos
+        LOG progress bar
+        FLUSH log_fp
+  ELSE IF mode "double-sided":
+    Similar loop but ADD and CLFLUSH both agg1 and agg2
+  ELSE IF mode "half-double":
+    COMPUTE far_iters = iters * 2/3, near_iters = iters - far
+    Loop for far_iters on agg1
+    Loop for near_iters on agg2
+    LOG [Far]/[Near] progress bars
+  LOG 100% progress
+  LOG hammering complete
+
+Block 30: Check Flips Function
+
+Line Range: 1055-1076
+Description: Function to check for bit flips in a page.
+Pseudocode:textFUNCTION check_flips(va, size, data_pattern):
+  SET page_va = va aligned to 4K
+  GET p = volatile uint8 at page_va
+  INITIALIZE flips = 0
+  FOR off in 0..size-1:
+    IF data_pattern "aa55":
+      expected = 0xAA if off even else 0x55
+    ELSE:
+      expected = 0xFF
+    IF p[off] != expected:
+      INCREMENT flips
+      LOG flip info
+      PRINT success message
+  RETURN flips
+
+Block 31: Fuzz Bank Function
+
+Line Range: 1078-1198
+Description: Function to fuzz a bank by selecting pairs and hammering, with logging.
+Pseudocode:textFUNCTION fuzz_bank(bank, fuzz_pairs, fuzz_iters, buf, bytes, mode, data_pattern):
+  CHECK if enough hits for mode
+  IF not:
+    WARN and RETURN
+  GET best_ctx = most_common_ctx(bank)
+  FILTER hits to filtered vec with best_ctx
+  IF filtered too small for mode:
+    WARN, free, RETURN
+  SORT filtered by row/col
+  INIT buffer with pattern (aa55 or ff)
+  LOG fuzz start
+  COMPUTE and LOG unique_rows
+  IF unique_rows < min for mode:
+    WARN, free, RETURN
+  LOG first/last 10 rows
+  INITIALIZE attempted = 0
+  INITIALIZE attempts = 0
+  SET max_attempts = fuzz_pairs * 100
+  LOG loop start
+  WHILE attempted < fuzz_pairs and filtered.n >= min_hits:
+    INCREMENT attempts
+    IF attempts > max_attempts:
+      LOG exceeded, break
+    LOG attempt number
+    SET num_picks = 2 if one-sided else 3
+    GENERATE random distinct indices[0..num_picks-1]
+    GET candidates from filtered at indices
+    BUBBLE SORT candidates by row
+    CHECK if distinct rows
+    IF not:
+      LOG skipping, CONTINUE
+    CHECK if adjacent (diff=1)
+    IF not:
+      LOG skipping, CONTINUE
+    IF half-double, check pattern (2 then 1)
+    IF not:
+      LOG skipping, CONTINUE
+    SET agg1 = candidates[0]
+    SET victim = candidates[1] (or [1] for 3)
+    SET agg2 = candidates[2] if 3 else NULL
+    FORMAT agg2 strings if agg2 else N/A
+    PRINT and LOG valid set
+    CALL hammer_simple with agg1, victim, agg2, iters, mode
+    GET flips = check_flips(victim.va, 4096, data_pattern)
+    LOG fuzz result
+    IF flips > 0:
+      PRINT success
+    INCREMENT attempted
+    LOG attempted count
+  FREE filtered
+  LOG end fuzz
+
+Block 32: Fuzz Banks Function
+
+Line Range: 1200-1209
+Description: Wrapper to fuzz a specific bank or the best one.
+Pseudocode:textFUNCTION fuzz_banks(banks, fuzz_bank_id, fuzz_pairs, fuzz_iters, buf, bytes, best, mode, data_pattern):
+  IF fuzz_bank_id < 0:
+    SET fuzz_bank_id = best
+  IF fuzz_bank_id out of 0-15:
+    WARN invalid
+    RETURN
+  CALL fuzz_bank on banks[fuzz_bank_id] with params
+
+Block 33: Main Function
+
+Line Range: 1211-1452
+Description: Parses arguments, initializes, allocates memory, sweeps and decodes addresses, prints summary, handles touch/dump/validate/fuzz, cleans up.
+Pseudocode:textFUNCTION main(argc, argv):
+  INITIALIZE all variables with defaults
+  PARSE arguments with loop on i=1 to argc-1
+    MATCH options and set values
+    IF unknown:
+      USAGE and RETURN 2
+  IGNORE unused variables with (void)
+  OPEN log_fp
+  IF fails:
+    DIE with error
+  SEED rand with time
+  SCAN PCI devices into ents
+  GET TOLM/TOHM
+  GET bus mappings, num_sockets
+  GET and open memory units
+  LOAD DIMM params
+  ASSIGN MC numbers
+  ROUND bytes to huge page multiple if needed
+  MMAP buf with huge pages
+  IF fails:
+    DIE with error
+  TOUCH pages to map
+  MLOCK buf
+  INITIALIZE banks array
+  SWEEP off from 0 to bytes step step
+    GET va = buf + off
+    GET pa from va_to_pa
+    IF fails:
+      CONTINUE
+    DECODE pa to da
+    IF fails:
+      CONTINUE
+    COMPUTE bg, bank, bank_id
+    IF bank_id out of 0-15:
+      CONTINUE
+    FILL hit h from da
+    PUSH h to banks[bank_id]
+    INCREMENT collected
+  PRINT TOLM/TOHM
+  PRINT collected summary
+  FIND and PRINT best bank
+  PRINT sample addresses from best
+  IF do_touch:
+    SELECT va from bank or explicit
+    PRINT selection
+    GUARD va in allocation
+    CALL touch_one_va
+  IF dump_dir:
+    CALL dump_bank_files
+  IF bs_dir:
+    CALL write_blacksmith_outputs
+  IF do_validate:
+    SET validate_bank to best if -1
+    CALL timing_validate_bank
+  IF fuzz_pairs > 0:
+    CALL fuzz_banks
+  CLEANUP banks, ents, munmap buf, close log
+  RETURN 0
