@@ -1,7 +1,7 @@
 // skx_bank_sweep2.cpp with added simple Rowhammer fuzzing and Blacksmith pattern generator
 // Userspace SKX address decoder + allocator + bank/bin collation + basic fuzzer.
 // Build: g++ -O2 -Wall -Wextra -std=c++17 -Wno-unused-function -o skx_fuzz skx_fuzz.cpp -lasmjit
-// Run: sudo ./skx_fuzz --bytes 268435456 --step 64 --max 2000 --fuzz-pairs 64
+// Run: sudo ./skx_fuzz --bytes 1073741824 --step 64 --max 100000 --fuzz-pairs 64  # Larger allocation (1GB) example
 
 // Note: This is now C++ to incorporate Blacksmith's pattern generator (originally C++). If asmjit is not installed, install it or disable ENABLE_JITTING.
 // ENABLE_JITTING enables dynamic code generation for hammering patterns.
@@ -1086,8 +1086,6 @@ static void hammer_simple(uint64_t agg1_va, uint64_t victim_va, uint64_t agg2_va
                 do_clflush((const void *)agg1);
             }
             do_mfence();
-            // Replaced progress bar with blank line in log
-            log_printf("\n");
         }
     } else if (strcmp(mode, "double-sided") == 0) {
         // Alternate agg1 and agg2
@@ -1099,8 +1097,6 @@ static void hammer_simple(uint64_t agg1_va, uint64_t victim_va, uint64_t agg2_va
                 do_clflush((const void *)agg2);
             }
             do_mfence();
-            // Replaced progress bar with blank line in log
-            log_printf("\n");
         }
     } else if (strcmp(mode, "half-double") == 0) {
         // Hammer agg1 (far) more, then agg2 (near)
@@ -1112,8 +1108,6 @@ static void hammer_simple(uint64_t agg1_va, uint64_t victim_va, uint64_t agg2_va
                 do_clflush((const void *)agg1);
             }
             do_mfence();
-            // Replaced progress bar with blank line in log
-            log_printf("\n");
         }
         for (uint64_t i = 0; i < near_iters; i++) {
             for (int m = 0; m < multi_hammer; m++) {
@@ -1121,8 +1115,6 @@ static void hammer_simple(uint64_t agg1_va, uint64_t victim_va, uint64_t agg2_va
                 do_clflush((const void *)agg2);
             }
             do_mfence();
-            // Replaced progress bar with blank line in log
-            log_printf("\n");
         }
     }
     log_printf("Hammering complete for this pair.\n");
@@ -1298,11 +1290,16 @@ static void fuzz_bank(struct vec *bank, uint64_t fuzz_pairs, uint64_t fuzz_iters
         total_attempts++;
         total_flips += flips;
         log_printf("fuzz: successful attempted %zu / %" PRIu64 "\n", attempted, fuzz_pairs);
+        // Add one blank line between attempts
+        log_printf("\n");
     }
     free(filtered.v);
     log_printf("=== END FUZZ ===\n");
     log_printf("Total flips: %d\n", total_flips);
     log_printf("Total attempts: %d\n", total_attempts);
+    // Print to screen
+    printf("\nTotal flips: %d\n", total_flips);
+    printf("Total attempts: %d\n", total_attempts);
 }
 static void fuzz_banks(struct vec banks[16], int fuzz_bank_id, uint64_t fuzz_pairs, uint64_t fuzz_iters, void *buf, uint64_t bytes, int best, const char *mode, const char *data_pattern) {
     if (fuzz_bank_id < 0) fuzz_bank_id = best;
