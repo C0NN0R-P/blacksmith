@@ -1,6 +1,6 @@
 // skx_bank_sweep2.cpp with added simple Rowhammer fuzzing and Blacksmith pattern generator
 // Userspace SKX address decoder + allocator + bank/bin collation + basic fuzzer.
-// Build: g++ -O2 -Wall -Wextra -std=c++11 -o skx_fuzz skx_fuzz.cpp -lasmjit (assuming asmjit library is installed and linked)
+// Build: g++ -O2 -Wall -Wextra -std=c++17 -Wno-unused-function -o skx_fuzz skx_fuzz.cpp -lasmjit
 // Run: sudo ./skx_fuzz --bytes 268435456 --step 64 --max 2000 --fuzz-pairs 64
 
 // Note: This is now C++ to incorporate Blacksmith's pattern generator (originally C++). If asmjit is not installed, install it or disable ENABLE_JITTING.
@@ -41,524 +41,1526 @@
 #include <cmath> // for floor
 
 #ifdef ENABLE_JITTING
-#include <asmjit/asmjit.h>
+#include <asmjit/core.h>
+#include <asmjit/x86.h>
 #endif
 
-// Global defines (assumed from GlobalDefines.hpp, added here for single file)
-#define NUM_BANKS 16
-#define ID_PLACEHOLDER_AGG -1
+#ifndef BIT_ULL
+#define BIT_ULL(n) (1ULL << (n))
+#endif
+#ifndef GENMASK_ULL
+#define GENMASK_ULL(h, l) \
+    (((~0ULL) - (1ULL << (l)) + 1) & (~0ULL >> (63 - (h))))
+#endif
+#define GET_BITFIELD(v, lo, hi) \
+    (((v) & GENMASK_ULL((hi), (lo))) >> (lo))
+#define NUM_IMC 2
+#define NUM_CHANNELS 3
+#define NUM_DIMMS 2
+#define MASK26 0x3FFFFFFULL
+#define MASK29 0x1FFFFFFFULL
+#define NUM_BANKS 16 // Assumed number of banks for mapping
+#define ID_PLACEHOLDER_AGG -1 // Placeholder for empty aggressor
 
-// Block: Blacksmith Classes Integration
-// This block includes classes from Blacksmith for pattern generation, aggressors, hammering patterns, etc.
-
-// Logger class (simple, replace with printf for now)
-class Logger {
-public:
-    static void log_error(const std::string& msg) { fprintf(stderr, "ERROR: %s\n", msg.c_str()); }
-    static void log_info(const std::string& msg) { printf("INFO: %s\n", msg.c_str()); }
-    static void log_data(const std::string& msg) { printf("DATA: %s\n", msg.c_str()); }
-};
-
-// Utility for formatting strings
-std::string format_string(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    char buffer[1024];
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
-    return std::string(buffer);
+// Global log file and log_printf
+static FILE *log_fp = NULL;
+static void log_printf(const char *fmt, ...) {
+    if (log_fp == NULL) return;
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(log_fp, fmt, ap);
+    va_end(ap);
 }
 
-// Utility for UUID generation (simple placeholder, as original uses uuid library)
-namespace uuid {
-    std::string gen_uuid() { return "placeholder-uuid"; }
+// ---------- minimal logging ----------
+static void die(const char *fmt, ...) __attribute__((noreturn));
+static void die(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(1);
 }
-
-// Enum for flushing and fencing strategies
-enum class FLUSHING_STRATEGY { EARLIEST_POSSIBLE };
-enum class FENCING_STRATEGY { LATEST_POSSIBLE };
-std::string to_string(FLUSHING_STRATEGY s) { return "EARLIEST_POSSIBLE"; }
-std::string to_string(FENCING_STRATEGY s) { return "LATEST_POSSIBLE"; }
-
-// Aggressor class
-typedef int AGGRESSOR_ID_TYPE;
-class Aggressor {
-public:
-    AGGRESSOR_ID_TYPE id;
-    Aggressor() : id(ID_PLACEHOLDER_AGG) {}
-    Aggressor(int id) : id(id) {}
-    std::string to_string() const {
-        if (id == ID_PLACEHOLDER_AGG) return "EMPTY";
-        std::stringstream ss;
-        ss << "agg" << std::setfill('0') << std::setw(2) << id;
-        return ss.str();
-    }
-    Aggressor& operator=(const Aggressor& other) {
-        if (this == &other) return *this;
-        id = other.id;
-        return *this;
-    }
-    static std::vector<AGGRESSOR_ID_TYPE> get_agg_ids(const std::vector<Aggressor>& aggressors) {
-        std::vector<AGGRESSOR_ID_TYPE> agg_ids;
-        agg_ids.reserve(aggressors.size());
-        for (const auto& agg : aggressors) agg_ids.push_back(agg.id);
-        return agg_ids;
-    }
-    static std::vector<Aggressor> create_aggressors(const std::vector<AGGRESSOR_ID_TYPE>& agg_ids) {
-        std::vector<Aggressor> result_list;
-        std::unordered_map<AGGRESSOR_ID_TYPE, Aggressor> aggId_to_aggressor_map;
-        for (const auto& id : agg_ids) {
-            if (aggId_to_aggressor_map.count(id) == 0) {
-                aggId_to_aggressor_map[id] = Aggressor(id);
-            }
-            result_list.push_back(aggId_to_aggressor_map.at(id));
-        }
-        return result_list;
-    }
-};
-
-// AggressorAccessPattern class
-class AggressorAccessPattern {
-public:
-    int frequency;
-    int amplitude;
-    int start_offset;
-    std::vector<Aggressor> aggressors;
-    AggressorAccessPattern() : frequency(0), amplitude(0), start_offset(0) {}
-    AggressorAccessPattern(int freq, int amp, const std::vector<Aggressor>& aggs, int offset)
-        : frequency(freq), amplitude(amp), aggressors(aggs), start_offset(offset) {}
-    bool operator==(const AggressorAccessPattern& rhs) const {
-        return frequency == rhs.frequency &&
-               amplitude == rhs.amplitude &&
-               start_offset == rhs.start_offset &&
-               aggressors.size() == rhs.aggressors.size();
-    }
-    std::string to_string() const {
-        std::stringstream aggs_ss;
-        aggs_ss << "(";
-        for (size_t i = 0; i < aggressors.size(); ++i) {
-            aggs_ss << aggressors[i].id;
-            if (i < aggressors.size() - 1) aggs_ss << ",";
-        }
-        aggs_ss << "): ";
-        std::stringstream ss;
-        ss << aggs_ss.str() << frequency << ", " << amplitude << "⨉, " << start_offset;
-        return ss.str();
-    }
-    AggressorAccessPattern& operator=(const AggressorAccessPattern& other) {
-        if (this == &other) return *this;
-        frequency = other.frequency;
-        amplitude = other.amplitude;
-        start_offset = other.start_offset;
-        aggressors = other.aggressors;
-        return *this;
-    }
-};
-
-// HammeringPattern class
-class HammeringPattern {
-public:
-    std::string instance_id;
-    int base_period;
-    int max_period;
-    int total_activations;
-    int num_refresh_intervals;
-    std::vector<Aggressor> aggressors;
-    std::vector<AggressorAccessPattern> agg_access_patterns;
-    std::vector<class PatternAddressMapper> address_mappings;
-    bool is_location_dependent;
-    HammeringPattern() : instance_id(uuid::gen_uuid()), base_period(0), max_period(0), total_activations(0), num_refresh_intervals(0), is_location_dependent(false) {}
-    HammeringPattern(int base) : instance_id(uuid::gen_uuid()), base_period(base), max_period(0), total_activations(0), num_refresh_intervals(0), is_location_dependent(false) {}
-    static int get_num_digits(size_t x) {
-        return (x < 10 ? 1 : (x < 100 ? 2 : (x < 1000 ? 3 : (x < 10000 ? 4 : (x < 100000 ? 5 : (x < 1000000 ? 6 : (x < 10000000 ? 7 : (x < 100000000 ? 8 : (x < 1000000000 ? 9 : 10)))))))));
-    }
-    std::string get_pattern_text_repr() {
-        std::stringstream ss;
-        auto dwidth = (agg_access_patterns.size() > 2) ? get_num_digits(aggressors.size()) : 2;
-        for (size_t i = 0; i < aggressors.size(); ++i) {
-            if ((i % base_period) == 0 && i > 0) ss << std::endl;
-            ss << std::setfill('0') << std::setw(dwidth) << aggressors.at(i).id << " ";
-        }
-        return ss.str();
-    }
-    std::string get_agg_access_pairs_text_repr() {
-        std::stringstream ss;
-        auto cnt = 0;
-        for (const auto& agg_acc_pair : agg_access_patterns) {
-            if (cnt > 0 && cnt % 3 == 0) ss << std::endl;
-            ss << std::setw(30) << std::setfill(' ') << std::left << agg_acc_pair.to_string();
-            cnt++;
-        }
-        return ss.str();
-    }
-    AggressorAccessPattern& get_access_pattern_by_aggressor(Aggressor& agg) {
-        for (auto& aap : agg_access_patterns) {
-            if (aap.aggressors[0].id == agg.id) return aap;
-        }
-        die("Could not find AggressorAccessPattern");
-        static AggressorAccessPattern dummy; // dummy return to avoid compiler error
-        return dummy;
-    }
-    class PatternAddressMapper& get_most_effective_mapping() {
-        if (address_mappings.empty()) die("No mappings");
-        PatternAddressMapper& best_mapping = address_mappings.front();
-        for (auto& mapping : address_mappings) {
-            if (mapping.count_bitflips() > best_mapping.count_bitflips()) best_mapping = mapping;
-        }
-        return best_mapping;
-    }
-    void remove_mappings_without_bitflips() {
-        for (auto it = address_mappings.begin(); it != address_mappings.end(); ) {
-            if (it->count_bitflips() == 0) it = address_mappings.erase(it);
-            else ++it;
-        }
-    }
-};
-
-// DRAMAddr class (simple placeholder)
-struct DRAMAddr {
-    size_t row;
-    size_t bank;
-    DRAMAddr(size_t r, size_t b) : row(r), bank(b) {}
-    void* to_virt() { return nullptr; } // Placeholder
-};
-
-// BitFlip class
-class BitFlip {
-public:
-    DRAMAddr address;
-    uint8_t bitmask;
-    uint8_t corrupted_data;
-    time_t observation_time;
-    BitFlip() { observation_time = time(nullptr); }
-    BitFlip(const DRAMAddr& addr, uint8_t flips_bitmask, uint8_t data) : address(addr), bitmask(flips_bitmask), corrupted_data(data) {
-        observation_time = time(nullptr);
-    }
-    size_t count_z2o_corruptions() const {
-        std::bitset<8> mask_bits(bitmask);
-        std::bitset<8> data_bits(corrupted_data);
-        size_t count = 0;
-        for (size_t i = 0; i < 8; ++i) {
-            if (mask_bits[i] && data_bits[i]) count++;
-        }
-        return count;
-    }
-    size_t count_o2z_corruptions() const {
-        std::bitset<8> mask_bits(bitmask);
-        std::bitset<8> data_bits(corrupted_data);
-        size_t count = 0;
-        for (size_t i = 0; i < 8; ++i) {
-            if (mask_bits[i] && !data_bits[i]) count++;
-        }
-        return count;
-    }
-    size_t count_bit_corruptions() const {
-        uint8_t n = bitmask;
-        unsigned count = 0;
-        while (n > 0) {
-            n &= (n - 1);
-            count++;
-        }
-        return count;
-    }
-};
-
-// PatternAddressMapper class
-class PatternAddressMapper {
-public:
-    std::string instance_id;
-    std::unique_ptr<class CodeJitter> code_jitter;
-    int min_row;
-    int max_row;
-    int bank_no;
-    std::unordered_map<AGGRESSOR_ID_TYPE, DRAMAddr> aggressor_to_addr;
-    std::vector<BitFlip> bit_flips;
-    double reproducibility_score;
-    static int bank_counter;
-    std::mt19937 gen;
-    PatternAddressMapper() : instance_id(uuid::gen_uuid()), min_row(0), max_row(0), bank_no(0), reproducibility_score(0.0) {
-        std::random_device rd;
-        gen = std::mt19937(rd());
-        code_jitter = std::make_unique<CodeJitter>();
-        bank_no = bank_counter;
-        bank_counter = (bank_counter + 1) % NUM_BANKS;
-    }
-    void randomize_addresses(HammeringPattern& pattern, bool verbose = false) {
-        aggressor_to_addr.clear();
-        bool use_seq_addresses = true; // Placeholder, randomize if needed
-        int start_row = (int)gen() % 10000; // Placeholder random
-        if (verbose) Logger::log_info("Randomizing addresses...");
-        size_t cur_row = static_cast<size_t>(start_row);
-        std::set<size_t> occupied_rows;
-        // ... (implement randomization logic as per original)
-    }
-    void compute_mapping_stats(std::vector<AggressorAccessPattern>& agg_access_patterns, int& agg_intra_distance, int& agg_inter_distance, bool uses_seq_addresses) {
-        // Implement as per original
-    }
-    size_t count_bitflips() const {
-        return bit_flips.size();
-    }
-    void remap_aggressors(DRAMAddr& new_location) {
-        // Implement as per original
-    }
-    PatternAddressMapper& operator=(const PatternAddressMapper& other) {
-        if (this == &other) return *this;
-        instance_id = other.instance_id;
-        min_row = other.min_row;
-        max_row = other.max_row;
-        bank_no = other.bank_no;
-        aggressor_to_addr = other.aggressor_to_addr;
-        bit_flips = other.bit_flips;
-        reproducibility_score = other.reproducibility_score;
-        return *this;
-    }
-};
-int PatternAddressMapper::bank_counter = 0;
-
-// FuzzingParameterSet class
-class FuzzingParameterSet {
-public:
-    int num_aggressors;
-    int num_refresh_intervals;
-    int total_acts_pattern;
-    int base_period;
-    int agg_intra_distance;
-    int agg_inter_distance;
-    int hammering_total_num_activations;
-    int max_row_no;
-    FLUSHING_STRATEGY flushing_strategy;
-    FENCING_STRATEGY fencing_strategy;
-    int num_activations_per_tREFI;
-    std::mt19937 gen;
-    // ... (add all fields and methods from FuzzingParameterSet.cpp)
-    FuzzingParameterSet(int measured_num_acts_per_ref = 0) : flushing_strategy(FLUSHING_STRATEGY::EARLIEST_POSSIBLE), fencing_strategy(FENCING_STRATEGY::LATEST_POSSIBLE) {
-        std::random_device rd;
-        gen = std::mt19937(rd());
-        set_num_activations_per_t_refi(measured_num_acts_per_ref);
-        randomize_parameters(false);
-    }
-    // Implement all methods like print_static_parameters, get_random_N_sided, etc.
-    void print_static_parameters() const {
-        Logger::log_info("Printing static hammering parameters:");
-        Logger::log_data(format_string("agg_intra_distance: %d", agg_intra_distance));
-        // ... (complete as per original)
-    }
-    // ... (add rest of the class methods)
-};
-
-// CodeJitter class
-class CodeJitter {
-public:
-    bool pattern_sync_each_ref;
-    FLUSHING_STRATEGY flushing_strategy;
-    FENCING_STRATEGY fencing_strategy;
-    int total_activations;
-    int num_aggs_for_sync;
-#ifdef ENABLE_JITTING
-    asmjit::JitRuntime runtime;
-    asmjit::StringLogger* logger;
-    void* fn;
-#endif
-    CodeJitter() : pattern_sync_each_ref(false), flushing_strategy(FLUSHING_STRATEGY::EARLIEST_POSSIBLE), fencing_strategy(FENCING_STRATEGY::LATEST_POSSIBLE), total_activations(5000000), num_aggs_for_sync(2) {
-#ifdef ENABLE_JITTING
-        logger = new asmjit::StringLogger;
-#endif
-    }
-    ~CodeJitter() {
-#ifdef ENABLE_JITTING
-        cleanup();
-#endif
-    }
-    void cleanup() {
-#ifdef ENABLE_JITTING
-        if (fn != nullptr) {
-            runtime.release(fn);
-            fn = nullptr;
-        }
-        if (logger != nullptr) {
-            delete logger;
-            logger = nullptr;
-        }
-#endif
-    }
-    int hammer_pattern(FuzzingParameterSet &fuzzing_parameters, bool verbose = false) {
-        if (fn == nullptr) {
-            Logger::log_error("Skipping hammering pattern as pattern could not be created successfully.");
-            return -1;
-        }
-        if (verbose) Logger::log_info("Hammering the last generated pattern.");
-        int total_sync_acts = reinterpret_cast<int(*)()>(fn)(); // Call the jitted function
-        if (verbose) {
-            Logger::log_info(" Synchronization stats:");
-            Logger::log_data(format_string("Total sync acts: %d", total_sync_acts));
-            // ... (add stats calculation as per original)
-        }
-        return total_sync_acts;
-    }
-    void jit_strict(int num_acts_per_trefi, FLUSHING_STRATEGY flushing, FENCING_STRATEGY fencing,
-                    const std::vector<volatile char*>& aggressor_pairs, bool sync_each_ref, int num_aggressors_for_sync, int total_num_activations) {
-#ifdef ENABLE_JITTING
-        asmjit::x86::Assembler assembler(&runtime);
-        assembler.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateAssembler | asmjit::DiagnosticOptions::kValidateIntermediate);
-        assembler.setLogger(logger);
-        // Implement JIT code generation as per original CodeJitter::jit_strict
-        // For example:
-        // assembler.mov(asmjit::x86::rsi, total_num_activations); // Example
-        // ... (full ASM generation logic)
-        // fn = assembler.make();
+static void warnx(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+}
+// ---------- cacheline touch helper (for perf bank validation) ----------
+static inline void do_clflush(const void *p) {
+#if defined(__x86_64__) || defined(__i386__)
+    __asm__ __volatile__("clflush (%0)" :: "r"(p) : "memory");
 #else
-        Logger::log_error("Cannot do code jitting. Set option ENABLE_JITTING to ON.");
+    (void)p;
 #endif
-    }
-#ifdef ENABLE_JITTING
-    void sync_ref(const std::vector<volatile char*>& aggressor_pairs, asmjit::x86::Assembler &assembler) {
-        // Implement sync_ref as per original
-        asmjit::Label wbegin = assembler.newLabel();
-        asmjit::Label wend = assembler.newLabel();
-        assembler.bind(wbegin);
-        assembler.mfence();
-        assembler.lfence();
-        assembler.push(asmjit::x86::edx);
-        assembler.rdtscp();
-        assembler.mov(asmjit::x86::ebx, asmjit::x86::eax);
-        assembler.lfence();
-        assembler.pop(asmjit::x86::edx);
-        for (auto agg : aggressor_pairs) {
-            assembler.mov(asmjit::x86::rax, (uint64_t)agg);
-            assembler.clflushopt(asmjit::x86::ptr(asmjit::x86::rax));
-            assembler.mov(asmjit::x86::rax, (uint64_t)agg);
-            assembler.mov(asmjit::x86::rcx, asmjit::x86::ptr(asmjit::x86::rax));
-            assembler.inc(asmjit::x86::edx);
-        }
-        assembler.push(asmjit::x86::edx);
-        assembler.rdtscp();
-        assembler.lfence();
-        assembler.pop(asmjit::x86::edx);
-        assembler.sub(asmjit::x86::eax, asmjit::x86::ebx);
-        assembler.cmp(asmjit::x86::eax, 1000);
-        assembler.jg(wend);
-        assembler.jmp(wbegin);
-        assembler.bind(wend);
-    }
+}
+static inline void do_mfence(void) {
+#if defined(__x86_64__) || defined(__i386__)
+    __asm__ __volatile__("mfence" ::: "memory");
 #endif
+}
+static inline void do_lfence(void) {
+#if defined(__x86_64__) || defined(__i386__)
+    __asm__ __volatile__("lfence" ::: "memory");
+#endif
+}
+static void touch_one_va(uint64_t va, uint64_t iters) {
+    // Safety clamp: avoid accidental “hammer the box to death”.
+    if (iters < 1000) iters = 1000;
+    if (iters > 50000000ULL) {
+        warnx("warn: clamping --touch-iters to 50000000 for safety (was %" PRIu64 ")", iters);
+        iters = 50000000ULL;
+    }
+    volatile uint8_t *ptr = (volatile uint8_t *)(uintptr_t)va;
+    (void)*ptr; // ensure mapping
+    printf("\n=== TOUCH LOOP ===\n");
+    printf("VA=0x%016" PRIx64 " iters=%" PRIu64 " (clflush+load)\n", va, iters);
+    log_printf("\n=== TOUCH LOOP ===\n");
+    log_printf("VA=0x%016" PRIx64 " iters=%" PRIu64 " (clflush+load)\n", va, iters);
+    uint64_t sink = 0;
+    for (uint64_t i = 0; i < iters; i++) {
+        do_clflush((const void *)ptr);
+        do_mfence();
+        do_lfence();
+        sink += *ptr;
+    }
+    if (sink == 0xFFFFFFFFFFFFFFFFULL) printf("sink=%" PRIu64 "\n", sink);
+    printf("TOUCH LOOP DONE\n");
+    printf("==================\n");
+    log_printf("TOUCH LOOP DONE\n");
+    log_printf("==================\n");
+}
+// ---------- sysfs helpers ----------
+static int read_u32_file(const char *path, uint32_t *out) {
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return -errno;
+    char buf[64];
+    ssize_t n = read(fd, buf, sizeof(buf)-1);
+    close(fd);
+    if (n <= 0) return -EIO;
+    buf[n] = 0;
+    unsigned long v = strtoul(buf, NULL, 0);
+    *out = (uint32_t)v;
+    return 0;
+}
+static int pread_u32(int fd, off_t off, uint32_t *out) {
+    uint32_t v = 0;
+    ssize_t n = pread(fd, &v, sizeof(v), off);
+    if (n != (ssize_t)sizeof(v)) return -errno;
+    *out = v;
+    return 0;
+}
+static int open_pci_config(const char *bdf, char *out_path, size_t out_sz) {
+    // bdf like "0000:3a:0a.0"
+    snprintf(out_path, out_sz, "/sys/bus/pci/devices/%s/config", bdf);
+    int fd = open(out_path, O_RDONLY);
+    if (fd < 0) return -errno;
+    return fd;
+}
+// Parse sysfs dir name "0000:bb:dd.f"
+static int parse_bdf(const char *name, unsigned *seg, unsigned *bus, unsigned *dev, unsigned *fn) {
+    if (sscanf(name, "%x:%x:%x.%x", seg, bus, dev, fn) != 4) return -1;
+    return 0;
+}
+static uint8_t pci_devfn(unsigned dev, unsigned fn) {
+    return (uint8_t)((dev << 3) | (fn & 7));
+}
+// ---------- SKX structures (userspace) ----------
+struct skx_dimm {
+    uint8_t close_pg;
+    uint8_t bank_xor_enable;
+    uint8_t fine_grain_bank;
+    uint8_t rowbits;
+    uint8_t colbits;
 };
-
-// PatternBuilder class
-class PatternBuilder {
-public:
-    HammeringPattern& pattern;
-    int aggressor_id_counter;
-    std::mt19937 gen;
-    PatternBuilder(HammeringPattern& hammering_pattern) : pattern(hammering_pattern), aggressor_id_counter(1) {
-        std::random_device rd;
-        gen = std::mt19937(rd());
-    }
-    size_t get_random_gaussian(std::vector<int>& list) {
-        size_t result;
-        do {
-            double mean = static_cast<double>((list.size() % 2 == 0) ? list.size() / 2 - 1 : (list.size() - 1) / 2);
-            std::normal_distribution<> d(mean, 1);
-            result = static_cast<size_t>(d(gen));
-        } while (result >= list.size());
-        return result;
-    }
-    void remove_smaller_than(std::vector<int>& vec, int N) {
-        vec.erase(std::remove_if(vec.begin(), vec.end(), [N](int x) { return x < N; }), vec.end());
-    }
-    int all_slots_full(size_t offset, size_t period, int pattern_length, std::vector<Aggressor>& aggs) {
-        for (size_t i = 0; i < aggs.size(); ++i) {
-            auto idx = (offset + i * period) % pattern_length;
-            if (aggs[idx].id == ID_PLACEHOLDER_AGG) return static_cast<int>(idx);
+struct skx_channel {
+    char bdf[32]; // BDF string for channel device
+    int cfg_fd; // open fd to config
+    struct skx_dimm dimms[NUM_DIMMS];
+};
+struct skx_imc {
+    uint8_t mc; // system-wide MC number
+    uint8_t lmc; // socket-relative MC number
+    uint8_t src_id;
+    uint8_t node_id;
+    struct skx_channel chan[NUM_CHANNELS];
+};
+struct skx_dev {
+    struct skx_dev *next;
+    uint8_t busmap[4]; // bus indices from 0x2016 reg 0xCC
+    char sad_all_bdf[32]; // 0x2054
+    char util_all_bdf[32]; // 0x2055
+    int sad_all_fd;
+    int util_all_fd;
+    uint32_t mcroute; // from 0x208e reg 0xB4
+    struct skx_imc imc[NUM_IMC];
+};
+struct decoded_addr {
+    struct skx_dev *dev;
+    uint64_t addr;
+    int socket;
+    int imc;
+    int channel;
+    uint64_t chan_addr;
+    int sktways;
+    int chanways;
+    int dimm;
+    int rank;
+    int channel_rank;
+    uint64_t rank_address;
+    int row;
+    int column;
+    int bank_address;
+    int bank_group;
+};
+// ---------- global TOLM/TOHM ----------
+static uint64_t skx_tolm = 0, skx_tohm = 0;
+// ---------- scan PCI devices ----------
+static int is_dir(const char *path) {
+    struct stat st;
+    if (stat(path, &st) != 0) return 0;
+    return S_ISDIR(st.st_mode);
+}
+struct pci_ent {
+    char bdf[32];
+    uint16_t vendor;
+    uint16_t device;
+    uint8_t bus;
+    uint8_t devfn;
+};
+static struct pci_ent *scan_pci(size_t *out_n) {
+    const char *root = "/sys/bus/pci/devices";
+    DIR *d = opendir(root);
+    if (!d) die("failed to open %s: %s", root, strerror(errno));
+    size_t cap = 256, n = 0;
+    struct pci_ent *arr = (struct pci_ent*)calloc(cap, sizeof(*arr));
+    if (!arr) die("oom");
+    struct dirent *de;
+    while ((de = readdir(d)) != NULL) {
+        if (de->d_name[0] == '.') continue;
+        char path[PATH_MAX];
+        snprintf(path, sizeof(path), "%s/%s", root, de->d_name);
+        if (!is_dir(path)) continue;
+        uint32_t v=0, did=0;
+        char vpath[PATH_MAX], dpath[PATH_MAX];
+        snprintf(vpath, sizeof(vpath), "%s/vendor", path);
+        snprintf(dpath, sizeof(dpath), "%s/device", path);
+        if (read_u32_file(vpath, &v) != 0) continue;
+        if (read_u32_file(dpath, &did) != 0) continue;
+        unsigned seg,bus,dev,fn;
+        if (parse_bdf(de->d_name, &seg, &bus, &dev, &fn) != 0) continue;
+        if (n == cap) {
+            cap *= 2;
+            arr = (struct pci_ent*)realloc(arr, cap * sizeof(*arr));
+            if (!arr) die("oom");
         }
+        snprintf(arr[n].bdf, sizeof(arr[n].bdf), "%s", de->d_name);
+        arr[n].vendor = (uint16_t)v;
+        arr[n].device = (uint16_t)did;
+        arr[n].bus = (uint8_t)bus;
+        arr[n].devfn = pci_devfn(dev, fn);
+        n++;
+    }
+    closedir(d);
+    *out_n = n;
+    return arr;
+}
+static struct pci_ent *find_first(const struct pci_ent *arr, size_t n, uint16_t vendor, uint16_t device) {
+    for (size_t i = 0; i < n; i++) {
+        if (arr[i].vendor == vendor && arr[i].device == device) return (struct pci_ent*)&arr[i];
+    }
+    return NULL;
+}
+static struct skx_dev *skx_devs = NULL;
+static int skx_num_sockets = 0;
+static struct skx_dev *get_skx_dev_by_bus(uint8_t bus, uint8_t idx) {
+    for (struct skx_dev *d = skx_devs; d; d = d->next) {
+        if (d->busmap[idx] == bus) return d;
+    }
+    return NULL;
+}
+static int skx_get_hi_lo_from_2034(const struct pci_ent *ents, size_t nents) {
+    // In-kernel driver uses 0x2034 offsets D0/D4/D8.
+    struct pci_ent *p = find_first(ents, nents, 0x8086, 0x2034);
+    if (!p) return -ENOENT;
+    char cfgpath[PATH_MAX];
+    int fd = open_pci_config(p->bdf, cfgpath, sizeof(cfgpath));
+    if (fd < 0) return fd;
+    uint32_t reg=0;
+    if (pread_u32(fd, 0xD0, &reg) != 0) { close(fd); return -EIO; }
+    skx_tolm = (uint64_t)reg;
+    if (pread_u32(fd, 0xD4, &reg) != 0) { close(fd); return -EIO; }
+    skx_tohm = (uint64_t)reg;
+    if (pread_u32(fd, 0xD8, &reg) != 0) { close(fd); return -EIO; }
+    skx_tohm |= ((uint64_t)reg << 32);
+    close(fd);
+    return 0;
+}
+static int get_all_bus_mappings(const struct pci_ent *ents, size_t nents) {
+    // Look for all 0x2016 devices; each represents a socket bus mapping.
+    for (size_t i = 0; i < nents; i++) {
+        if (ents[i].vendor != 0x8086 || ents[i].device != 0x2016) continue;
+        char cfgpath[PATH_MAX];
+        int fd = open_pci_config(ents[i].bdf, cfgpath, sizeof(cfgpath));
+        if (fd < 0) return fd;
+        uint32_t reg = 0;
+        int rc = pread_u32(fd, 0xCC, &reg);
+        close(fd);
+        if (rc != 0) continue;
+        struct skx_dev *d = (struct skx_dev*)calloc(1, sizeof(*d));
+        if (!d) die("oom");
+        d->busmap[0] = (uint8_t)GET_BITFIELD(reg, 0, 7);
+        d->busmap[1] = (uint8_t)GET_BITFIELD(reg, 8, 15);
+        d->busmap[2] = (uint8_t)GET_BITFIELD(reg, 16, 23);
+        d->busmap[3] = (uint8_t)GET_BITFIELD(reg, 24, 31);
+        d->sad_all_fd = -1;
+        d->util_all_fd = -1;
+        for (int mc = 0; mc < NUM_IMC; mc++) {
+            for (int ch = 0; ch < NUM_CHANNELS; ch++) {
+                d->imc[mc].chan[ch].cfg_fd = -1;
+            }
+        }
+        d->next = skx_devs;
+        skx_devs = d;
+        skx_num_sockets++;
+    }
+    return skx_num_sockets;
+}
+static int attach_unit_to_socket(struct skx_dev *d, const char *bdf, uint16_t did,
+                                 uint8_t devfn, int *out_mc_idx, int *out_ch_idx) {
+    // Mirrors skx_edac.c mapping logic:
+    // CHAN0: did 0x2040 devfn 10.0 (mc0) or 12.0 (mc1)
+    // CHAN1: did 0x2044 devfn 10.4 (mc0) or 12.4 (mc1)
+    // CHAN2: did 0x2048 devfn 11.0 (mc0) or 13.0 (mc1)
+    // SAD_ALL: did 0x2054
+    // UTIL_ALL: did 0x2055
+    // SAD: did 0x208e -> mcroute via 0xB4
+    int mc = -1, ch = -1;
+    if (did == 0x2040) { // CHAN0
+        if (devfn == pci_devfn(10,0)) mc = 0;
+        else if (devfn == pci_devfn(12,0)) mc = 1;
+        else return -1;
+        ch = 0;
+    } else if (did == 0x2044) { // CHAN1
+        if (devfn == pci_devfn(10,4)) mc = 0;
+        else if (devfn == pci_devfn(12,4)) mc = 1;
+        else return -1;
+        ch = 1;
+    } else if (did == 0x2048) { // CHAN2
+        if (devfn == pci_devfn(11,0)) mc = 0;
+        else if (devfn == pci_devfn(13,0)) mc = 1;
+        else return -1;
+        ch = 2;
+    } else if (did == 0x2054) {
+        snprintf(d->sad_all_bdf, sizeof(d->sad_all_bdf), "%s", bdf);
+        return 0;
+    } else if (did == 0x2055) {
+        snprintf(d->util_all_bdf, sizeof(d->util_all_bdf), "%s", bdf);
+        return 0;
+    } else if (did == 0x208e) {
+        // handled separately (mcroute)
+        return 0;
+    } else {
         return -1;
     }
-    void fill_slots(const size_t start_period, const size_t period_length, const size_t amplitude, std::vector<Aggressor>& aggressors, std::vector<Aggressor>& accesses, size_t pattern_length) {
-        for (size_t period = start_period; period < pattern_length; period += period_length) {
-            for (size_t amp = 0; amp < amplitude; ++amp) {
-                if (period + (aggressors.size() * amp) >= pattern_length) break;
-                for (size_t agg_idx = 0; agg_idx < aggressors.size(); ++agg_idx) {
-                    auto next_target = period + (aggressors.size() * amp) + agg_idx;
-                    if (next_target >= accesses.size()) break;
-                    accesses[next_target] = aggressors.at(agg_idx);
+    snprintf(d->imc[mc].chan[ch].bdf, sizeof(d->imc[mc].chan[ch].bdf), "%s", bdf);
+    if (out_mc_idx) *out_mc_idx = mc;
+    if (out_ch_idx) *out_ch_idx = ch;
+    return 0;
+}
+static int get_src_id(struct skx_dev *d, uint8_t *out) {
+    uint32_t reg = 0;
+    if (pread_u32(d->util_all_fd, 0xF0, &reg) != 0) return -EIO;
+    *out = (uint8_t)GET_BITFIELD(reg, 12, 14);
+    return 0;
+}
+static int get_node_id(struct skx_dev *d, uint8_t *out) {
+    uint32_t reg = 0;
+    if (pread_u32(d->util_all_fd, 0xF4, &reg) != 0) return -EIO;
+    *out = (uint8_t)GET_BITFIELD(reg, 0, 2);
+    return 0;
+}
+static int get_all_munits_and_open(const struct pci_ent *ents, size_t nents) {
+    // Attach all relevant devices to each socket.
+    for (size_t i = 0; i < nents; i++) {
+        if (ents[i].vendor != 0x8086) continue;
+        uint16_t did = ents[i].device;
+        if (!(did == 0x2054 || did == 0x2055 || did == 0x2040 || did == 0x2044 || did == 0x2048 || did == 0x208e))
+            continue;
+        // busidx for mapping: per skx_edac.c:
+        // 2054/2055/208e use busidx 1, channels use busidx 2.
+        uint8_t busidx = (did == 0x2040 || did == 0x2044 || did == 0x2048) ? 2 : 1;
+        struct skx_dev *d = get_skx_dev_by_bus(ents[i].bus, busidx);
+        if (!d) continue;
+        if (did == 0x208e) {
+            // build mcroute from non-zero 0xB4 entries, must match
+            char cfgpath[PATH_MAX];
+            int fd = open_pci_config(ents[i].bdf, cfgpath, sizeof(cfgpath));
+            if (fd < 0) continue;
+            uint32_t reg = 0;
+            if (pread_u32(fd, 0xB4, &reg) == 0 && reg != 0) {
+                if (d->mcroute == 0) d->mcroute = reg;
+                else if (d->mcroute != reg) {
+                    warnx("warn: mcroute mismatch on socket busidx=1 bus=%u (%08x vs %08x)",
+                          ents[i].bus, d->mcroute, reg);
+                }
+            }
+            close(fd);
+            continue;
+        }
+        attach_unit_to_socket(d, ents[i].bdf, did, ents[i].devfn, NULL, NULL);
+    }
+    // Open needed fds now
+    for (struct skx_dev *d = skx_devs; d; d = d->next) {
+        if (d->sad_all_bdf[0] == 0 || d->util_all_bdf[0] == 0) {
+            warnx("warn: missing sad_all/util_all for a socket (busmap=%u,%u,%u,%u)",
+                  d->busmap[0], d->busmap[1], d->busmap[2], d->busmap[3]);
+            continue;
+        }
+        char path[PATH_MAX];
+        d->sad_all_fd = open_pci_config(d->sad_all_bdf, path, sizeof(path));
+        if (d->sad_all_fd < 0) warnx("warn: open %s failed: %s", path, strerror(-d->sad_all_fd));
+        d->util_all_fd = open_pci_config(d->util_all_bdf, path, sizeof(path));
+        if (d->util_all_fd < 0) warnx("warn: open %s failed: %s", path, strerror(-d->util_all_fd));
+        for (int mc = 0; mc < NUM_IMC; mc++) {
+            for (int ch = 0; ch < NUM_CHANNELS; ch++) {
+                if (d->imc[mc].chan[ch].bdf[0] == 0) continue;
+                d->imc[mc].chan[ch].cfg_fd = open_pci_config(d->imc[mc].chan[ch].bdf, path, sizeof(path));
+                if (d->imc[mc].chan[ch].cfg_fd < 0)
+                    warnx("warn: open %s failed: %s", path, strerror(-d->imc[mc].chan[ch].cfg_fd));
+            }
+        }
+        // fill src_id/node_id into imc structs
+        if (d->util_all_fd >= 0) {
+            uint8_t src=0, node=0;
+            if (get_src_id(d, &src) == 0 && get_node_id(d, &node) == 0) {
+                for (int mc = 0; mc < NUM_IMC; mc++) {
+                    d->imc[mc].src_id = src;
+                    d->imc[mc].node_id = node;
+                    d->imc[mc].lmc = (uint8_t)mc;
                 }
             }
         }
     }
-    void get_n_aggressors(size_t N, std::vector<Aggressor>& aggs) {
-        aggs.clear();
-        for (size_t added_aggs = 0; added_aggs < N; ++added_aggs) {
-            aggs.emplace_back(aggressor_id_counter++);
-        }
-    }
-    void generate_frequency_based_pattern(FuzzingParameterSet& params, int pattern_length = 0, int base_period = 0) {
-        if (pattern_length == 0) pattern_length = params.get_total_acts_pattern();
-        if (base_period == 0) base_period = params.get_base_period();
-        pattern.aggressors = std::vector<Aggressor>(pattern_length, Aggressor());
-        pattern.agg_access_patterns.clear();
-        std::vector<int> cur_multiplicators(params.get_num_base_periods());
-        for (int i = 0; i < params.get_num_base_periods(); ++i) cur_multiplicators[i] = i + 1;
-        int cur_m = cur_multiplicators.at(get_random_gaussian(cur_multiplicators));
-        remove_smaller_than(cur_multiplicators, cur_m);
-        int cur_period = base_period * cur_m;
-        int num_aggressors = params.get_random_N_sided();
-        std::vector<Aggressor> aggressors;
-        get_n_aggressors(num_aggressors, aggressors);
-        int cur_amplitude = params.get_random_amplitude(static_cast<int>(std::floor(pattern_length / cur_period)));
-        pattern.agg_access_patterns.emplace_back(cur_period, cur_amplitude, aggressors, 0);
-        fill_slots(0, cur_period, cur_amplitude, aggressors, pattern.aggressors, pattern_length);
-        for (int k = 1; k < pattern_length; k++) {
-            if (pattern.aggressors[k].id != ID_PLACEHOLDER_AGG) continue;
-            int cur_m2 = cur_multiplicators.at(get_random_gaussian(cur_multiplicators));
-            remove_smaller_than(cur_multiplicators, cur_m2);
-            cur_period = base_period * cur_m2;
-            num_aggressors = params.get_random_N_sided(static_cast<int>(std::floor((pattern_length - k) / cur_period)));
-            get_n_aggressors(num_aggressors, aggressors);
-            cur_amplitude = params.get_random_amplitude(static_cast<int>(std::floor((pattern_length - k) / cur_period)));
-            pattern.agg_access_patterns.emplace_back(cur_period, cur_amplitude, aggressors, k);
-            fill_slots(k, cur_period, cur_amplitude, aggressors, pattern.aggressors, pattern_length);
-            for (auto next_slot = all_slots_full(k, base_period, pattern_length, pattern.aggressors);
-                 next_slot != -1;
-                 next_slot = all_slots_full(k, base_period, pattern_length, pattern.aggressors)) {
-                cur_m2 = cur_multiplicators.at(get_random_gaussian(cur_multiplicators));
-                remove_smaller_than(cur_multiplicators, cur_m2);
-                cur_period = base_period * cur_m2;
-                get_n_aggressors(num_aggressors, aggressors);
-                pattern.agg_access_patterns.emplace_back(cur_period, cur_amplitude, aggressors, next_slot);
-                fill_slots(static_cast<size_t>(next_slot), cur_period, cur_amplitude, aggressors, pattern.aggressors, pattern_length);
+    return 0;
+}
+// ---------- DIMM config extraction (from skx_edac.c) ----------
+static int get_dimm_attr(uint32_t reg, int lobit, int hibit, int add, int minval, int maxval) {
+    uint32_t val = (uint32_t)GET_BITFIELD(reg, lobit, hibit);
+    if ((int)val < minval || (int)val > maxval) return -EINVAL;
+    return (int)val + add;
+}
+#define IS_DIMM_PRESENT(mtr) GET_BITFIELD((mtr), 15, 15)
+static int numrank(uint32_t reg) { return get_dimm_attr(reg, 12, 13, 0, 1, 2); }
+static int numrow(uint32_t reg) { return get_dimm_attr(reg, 2, 4, 12, 1, 6); }
+static int numcol(uint32_t reg) { return get_dimm_attr(reg, 0, 1, 10, 0, 2); }
+static int skx_load_dimm_params(void) {
+    // Read per-channel regs:
+    // amap: 0x8C, mtr[dimm]: 0x80 + 4*j
+    for (struct skx_dev *d = skx_devs; d; d = d->next) {
+        for (int mc = 0; mc < NUM_IMC; mc++) {
+            for (int ch = 0; ch < NUM_CHANNELS; ch++) {
+                int fd = d->imc[mc].chan[ch].cfg_fd;
+                if (fd < 0) continue;
+                uint32_t amap = 0;
+                if (pread_u32(fd, 0x8C, &amap) != 0) continue;
+                for (int j = 0; j < NUM_DIMMS; j++) {
+                    uint32_t mtr = 0;
+                    if (pread_u32(fd, 0x80 + 4*j, &mtr) != 0) continue;
+                    if (!IS_DIMM_PRESENT(mtr)) continue;
+                    int ranks = numrank(mtr);
+                    int rows = numrow(mtr);
+                    int cols = numcol(mtr);
+                    (void)ranks;
+                    struct skx_dimm *sd = &d->imc[mc].chan[ch].dimms[j];
+                    sd->close_pg = (uint8_t)GET_BITFIELD(mtr, 0, 0);
+                    sd->bank_xor_enable = (uint8_t)GET_BITFIELD(mtr, 9, 9);
+                    sd->fine_grain_bank = (uint8_t)GET_BITFIELD(amap, 0, 0);
+                    sd->rowbits = (uint8_t)rows;
+                    sd->colbits = (uint8_t)cols;
+                }
             }
         }
-        pattern.total_activations = static_cast<int>(pattern.aggressors.size());
-        pattern.num_refresh_intervals = params.get_num_refresh_intervals();
     }
-    void prefill_pattern(int pattern_total_acts, std::vector<AggressorAccessPattern>& fixed_aggs) {
-        aggressor_id_counter = 1;
-        pattern.aggressors = std::vector<Aggressor>(static_cast<size_t>(pattern_total_acts), Aggressor());
-        for (auto& aap : fixed_aggs) {
-            for (auto& agg : aap.aggressors) agg.id = aggressor_id_counter++;
-            fill_slots(aap.start_offset, aap.frequency, aap.amplitude, aap.aggressors, pattern.aggressors, static_cast<size_t>(pattern_total_acts));
-            pattern.agg_access_patterns.push_back(aap);
+    return 0;
+}
+// ---------- decode logic (adapted from skx_edac.c) ----------
+#define SKX_MAX_SAD 24
+static int SKX_GET_SAD(struct skx_dev *d, int i, uint32_t *sad) {
+    return pread_u32(d->sad_all_fd, 0x60 + 8*i, sad);
+}
+static int SKX_GET_ILV(struct skx_dev *d, int i, uint32_t *ilv) {
+    return pread_u32(d->sad_all_fd, 0x64 + 8*i, ilv);
+}
+#define SKX_SAD_MOD3MODE(sad) GET_BITFIELD((sad), 30, 31)
+#define SKX_SAD_MOD3(sad) GET_BITFIELD((sad), 27, 27)
+#define SKX_SAD_LIMIT(sad) ((((uint64_t)GET_BITFIELD((sad), 7, 26)) << 26) | MASK26)
+#define SKX_SAD_MOD3ASMOD2(sad) GET_BITFIELD((sad), 5, 6)
+#define SKX_SAD_ATTR(sad) GET_BITFIELD((sad), 3, 4)
+#define SKX_SAD_INTERLEAVE(sad) GET_BITFIELD((sad), 1, 2)
+#define SKX_SAD_ENABLE(sad) GET_BITFIELD((sad), 0, 0)
+#define SKX_ILV_REMOTE(tgt) ((((tgt) & 8) == 0))
+#define SKX_ILV_TARGET(tgt) ((tgt) & 7)
+static bool skx_sad_decode(struct decoded_addr *res) {
+    // pick the first socket as starting point (like skx_edac), follow remote if needed
+    struct skx_dev *d0 = skx_devs;
+    if (!d0) return false;
+    struct skx_dev *d = d0;
+    uint64_t addr = res->addr;
+    if (addr >= skx_tohm || (addr >= skx_tolm && addr < BIT_ULL(32))) {
+        warnx("warn: address 0x%llx out of range (tolm=0x%llx tohm=0x%llx)",
+              (unsigned long long)addr, (unsigned long long)skx_tolm, (unsigned long long)skx_tohm);
+        return false;
+    }
+    int remote = 0;
+restart:
+    uint64_t prev_limit = 0;
+    for (int i = 0; i < SKX_MAX_SAD; i++) {
+        uint32_t sad=0;
+        if (SKX_GET_SAD(d, i, &sad) != 0) continue;
+        uint64_t limit = SKX_SAD_LIMIT(sad);
+        if (SKX_SAD_ENABLE(sad)) {
+            if (addr >= prev_limit && addr <= limit) {
+                uint32_t ilv=0;
+                if (SKX_GET_ILV(d, i, &ilv) != 0) return false;
+                int idx=0;
+                switch (SKX_SAD_INTERLEAVE(sad)) {
+                    case 0: idx = (int)GET_BITFIELD(addr, 6, 8); break;
+                    case 1: idx = (int)GET_BITFIELD(addr, 8, 10); break;
+                    case 2: idx = (int)GET_BITFIELD(addr, 12, 14); break;
+                    case 3: idx = (int)GET_BITFIELD(addr, 30, 32); break;
+                    default: return false;
+                }
+                int tgt = (int)GET_BITFIELD(ilv, 4*idx, 4*idx + 3);
+                if (SKX_ILV_REMOTE(tgt)) {
+                    if (remote) return false;
+                    remote = 1;
+                    int want = SKX_ILV_TARGET(tgt);
+                    for (struct skx_dev *x = skx_devs; x; x = x->next) {
+                        if (x->imc[0].src_id == want) { d = x; goto restart; }
+                    }
+                    return false;
+                }
+                int lchan=0, shift=0;
+                if (SKX_SAD_MOD3(sad) == 0) {
+                    lchan = SKX_ILV_TARGET(tgt);
+                } else {
+                    switch (SKX_SAD_MOD3MODE(sad)) {
+                        case 0: shift = 6; break;
+                        case 1: shift = 8; break;
+                        case 2: shift = 12; break;
+                        default: return false;
+                    }
+                    switch (SKX_SAD_MOD3ASMOD2(sad)) {
+                        case 0: lchan = (int)((addr >> shift) % 3); break;
+                        case 1: lchan = (int)((addr >> shift) % 2); break;
+                        case 2:
+                            lchan = (int)((addr >> shift) % 2);
+                            lchan = (lchan << 1) | ~lchan;
+                            break;
+                        case 3: lchan = (int)(((addr >> shift) % 2) << 1); break;
+                        default: return false;
+                    }
+                    lchan = (lchan << 1) | (SKX_ILV_TARGET(tgt) & 1);
+                }
+                res->dev = d;
+                res->socket = d->imc[0].src_id;
+                if (d->mcroute == 0) return false;
+                res->imc = (int)GET_BITFIELD(d->mcroute, lchan * 3, lchan * 3 + 2);
+                res->channel = (int)GET_BITFIELD(d->mcroute, lchan * 2 + 18, lchan * 2 + 19);
+                return true;
+            }
+        }
+        prev_limit = limit + 1;
+    }
+    return false;
+}
+#define SKX_MAX_TAD 8
+static int SKX_GET_TADBASE(struct skx_dev *d, int mc, int i, uint32_t *reg) {
+    // use channel 0 device of that imc (like driver)
+    int fd = d->imc[mc].chan[0].cfg_fd;
+    if (fd < 0) return -ENOENT;
+    return pread_u32(fd, 0x850 + 4*i, reg);
+}
+static int SKX_GET_TADWAYNESS(struct skx_dev *d, int mc, int i, uint32_t *reg) {
+    int fd = d->imc[mc].chan[0].cfg_fd;
+    if (fd < 0) return -ENOENT;
+    return pread_u32(fd, 0x880 + 4*i, reg);
+}
+static int SKX_GET_TADCHNILVOFFSET(struct skx_dev *d, int mc, int ch, int i, uint32_t *reg) {
+    int fd = d->imc[mc].chan[ch].cfg_fd;
+    if (fd < 0) return -ENOENT;
+    return pread_u32(fd, 0x90 + 4*i, reg);
+}
+#define SKX_TAD_BASE(b) (((uint64_t)GET_BITFIELD((b), 12, 31)) << 26)
+#define SKX_TAD_SKT_GRAN(b) GET_BITFIELD((b), 4, 5)
+#define SKX_TAD_CHN_GRAN(b) GET_BITFIELD((b), 6, 7)
+#define SKX_TAD_LIMIT(b) ((((uint64_t)GET_BITFIELD((b), 12, 31)) << 26) | MASK26)
+#define SKX_TAD_OFFSET(b) (((uint64_t)GET_BITFIELD((b), 4, 23)) << 26)
+#define SKX_TAD_SKTWAYS(b) (1 << GET_BITFIELD((b), 10, 11))
+#define SKX_TAD_CHNWAYS(b) (GET_BITFIELD((b), 8, 9) + 1)
+static int skx_granularity[] = { 6, 8, 12, 30 };
+static uint64_t skx_do_interleave(uint64_t addr, int shift, int ways, uint64_t lowbits) {
+    addr >>= shift;
+    addr /= (uint64_t)ways;
+    addr <<= shift;
+    return addr | (lowbits & ((1ULL << shift) - 1));
+}
+static bool skx_tad_decode(struct decoded_addr *res) {
+    for (int i = 0; i < SKX_MAX_TAD; i++) {
+        uint32_t base=0, wayness=0;
+        if (SKX_GET_TADBASE(res->dev, res->imc, i, &base) != 0) continue;
+        if (SKX_GET_TADWAYNESS(res->dev, res->imc, i, &wayness) != 0) continue;
+        if (SKX_TAD_BASE(base) <= res->addr && res->addr <= SKX_TAD_LIMIT(wayness)) {
+            res->sktways = (int)SKX_TAD_SKTWAYS(wayness);
+            res->chanways = (int)SKX_TAD_CHNWAYS(wayness);
+            int skt_interleave_bit = skx_granularity[SKX_TAD_SKT_GRAN(base)];
+            int chn_interleave_bit = skx_granularity[SKX_TAD_CHN_GRAN(base)];
+            uint32_t chnilvoffset=0;
+            if (SKX_GET_TADCHNILVOFFSET(res->dev, res->imc, res->channel, i, &chnilvoffset) != 0)
+                return false;
+            uint64_t channel_addr = res->addr - SKX_TAD_OFFSET(chnilvoffset);
+            if (res->chanways == 3 && skt_interleave_bit > chn_interleave_bit) {
+                channel_addr = skx_do_interleave(channel_addr, chn_interleave_bit, res->chanways, channel_addr);
+                channel_addr = skx_do_interleave(channel_addr, skt_interleave_bit, res->sktways, channel_addr);
+            } else {
+                channel_addr = skx_do_interleave(channel_addr, skt_interleave_bit, res->sktways, res->addr);
+                channel_addr = skx_do_interleave(channel_addr, chn_interleave_bit, res->chanways, res->addr);
+            }
+            res->chan_addr = channel_addr;
+            return true;
         }
     }
+    return false;
+}
+#define SKX_MAX_RIR 4
+static int SKX_GET_RIRWAYNESS(struct skx_dev *d, int mc, int ch, int i, uint32_t *reg) {
+    int fd = d->imc[mc].chan[ch].cfg_fd;
+    if (fd < 0) return -ENOENT;
+    return pread_u32(fd, 0x108 + 4*i, reg);
+}
+static int SKX_GET_RIRILV(struct skx_dev *d, int mc, int ch, int idx, int i, uint32_t *reg) {
+    int fd = d->imc[mc].chan[ch].cfg_fd;
+    if (fd < 0) return -ENOENT;
+    return pread_u32(fd, 0x120 + 16*idx + 4*i, reg);
+}
+#define SKX_RIR_VALID(b) GET_BITFIELD((b), 31, 31)
+#define SKX_RIR_LIMIT(b) ((((uint64_t)GET_BITFIELD((b), 1, 11)) << 29) | MASK29)
+#define SKX_RIR_WAYS(b) (1 << GET_BITFIELD((b), 28, 29))
+#define SKX_RIR_CHAN_RANK(b) GET_BITFIELD((b), 16, 19)
+#define SKX_RIR_OFFSET(b) (((uint64_t)GET_BITFIELD((b), 2, 15)) << 26)
+static bool skx_rir_decode(struct decoded_addr *res) {
+    struct skx_dimm *dimm0 = &res->dev->imc[res->imc].chan[res->channel].dimms[0];
+    int shift = dimm0->close_pg ? 6 : 13;
+    uint64_t prev_limit = 0;
+    for (int i = 0; i < SKX_MAX_RIR; i++) {
+        uint32_t rirway=0;
+        if (SKX_GET_RIRWAYNESS(res->dev, res->imc, res->channel, i, &rirway) != 0) continue;
+        uint64_t limit = SKX_RIR_LIMIT(rirway);
+        if (SKX_RIR_VALID(rirway)) {
+            if (prev_limit <= res->chan_addr && res->chan_addr <= limit) {
+                uint64_t rank_addr = res->chan_addr >> shift;
+                rank_addr /= (uint64_t)SKX_RIR_WAYS(rirway);
+                rank_addr <<= shift;
+                rank_addr |= (res->chan_addr & GENMASK_ULL(shift-1, 0));
+                int idx = (int)((res->chan_addr >> shift) % SKX_RIR_WAYS(rirway));
+                uint32_t rirlv=0;
+                if (SKX_GET_RIRILV(res->dev, res->imc, res->channel, idx, i, &rirlv) != 0)
+                    return false;
+                res->rank_address = rank_addr - SKX_RIR_OFFSET(rirlv);
+                int chan_rank = (int)SKX_RIR_CHAN_RANK(rirlv);
+                res->channel_rank = chan_rank;
+                res->dimm = chan_rank / 4;
+                res->rank = chan_rank % 4;
+                return true;
+            }
+        }
+        prev_limit = limit;
+    }
+    return false;
+}
+// MAD bits tables copied from skx_edac.c
+static uint8_t skx_close_row[] = {15,16,17,18,20,21,22,28,10,11,12,13,29,30,31,32,33};
+static uint8_t skx_close_column[] = {3,4,5,14,19,23,24,25,26,27};
+static uint8_t skx_open_row[] = {14,15,16,20,28,21,22,23,24,25,26,27,29,30,31,32,33};
+static uint8_t skx_open_column[] = {3,4,5,6,7,8,9,10,11,12};
+static uint8_t skx_open_fine_column[] = {3,4,5,7,8,9,10,11,12,13};
+static int skx_bits(uint64_t addr, int nbits, uint8_t *bits) {
+    int res = 0;
+    for (int i = 0; i < nbits; i++)
+        res |= (int)(((addr >> bits[i]) & 1ULL) << i);
+    return res;
+}
+static int skx_bank_bits(uint64_t addr, int b0, int b1, int do_xor, int x0, int x1) {
+    int ret = (int)GET_BITFIELD(addr, b0, b0) | ((int)GET_BITFIELD(addr, b1, b1) << 1);
+    if (do_xor) {
+        ret ^= (int)GET_BITFIELD(addr, x0, x0) | ((int)GET_BITFIELD(addr, x1, x1) << 1);
+    }
+    return ret;
+}
+static bool skx_mad_decode(struct decoded_addr *r) {
+    struct skx_dimm *dimm = &r->dev->imc[r->imc].chan[r->channel].dimms[r->dimm];
+    int bg0 = dimm->fine_grain_bank ? 6 : 13;
+    if (dimm->close_pg) {
+        r->row = skx_bits(r->rank_address, dimm->rowbits, skx_close_row);
+        r->column = skx_bits(r->rank_address, dimm->colbits, skx_close_column);
+        r->column |= 0x400;
+        r->bank_address = skx_bank_bits(r->rank_address, 8, 9, dimm->bank_xor_enable, 22, 28);
+        r->bank_group = skx_bank_bits(r->rank_address, 6, 7, dimm->bank_xor_enable, 20, 21);
+    } else {
+        r->row = skx_bits(r->rank_address, dimm->rowbits, skx_open_row);
+        if (dimm->fine_grain_bank)
+            r->column = skx_bits(r->rank_address, dimm->colbits, skx_open_fine_column);
+        else
+            r->column = skx_bits(r->rank_address, dimm->colbits, skx_open_column);
+        r->bank_address = skx_bank_bits(r->rank_address, 18, 19, dimm->bank_xor_enable, 22, 23);
+        r->bank_group = skx_bank_bits(r->rank_address, bg0, 17, dimm->bank_xor_enable, 20, 21);
+    }
+    r->row &= (1u << dimm->rowbits) - 1;
+    return true;
+}
+static bool skx_decode(struct decoded_addr *res) {
+    return skx_sad_decode(res) && skx_tad_decode(res) && skx_rir_decode(res) && skx_mad_decode(res);
+}
+// ---------- VA->PA via /proc/self/pagemap ----------
+static int va_to_pa(uint64_t va, uint64_t *pa_out) {
+    int fd = open("/proc/self/pagemap", O_RDONLY);
+    if (fd < 0) return -errno;
+    const uint64_t page_sz = 4096ULL;
+    uint64_t vpn = va / page_sz;
+    off_t off = (off_t)(vpn * 8ULL);
+    uint64_t entry = 0;
+    ssize_t n = pread(fd, &entry, sizeof(entry), off);
+    close(fd);
+    if (n != (ssize_t)sizeof(entry)) return -EIO;
+    // present bit 63
+    if (((entry >> 63) & 1ULL) == 0) return -ENOENT;
+    // PFN bits 0..54 on many kernels
+    uint64_t pfn = entry & ((1ULL << 55) - 1);
+    if (pfn == 0) return -EIO;
+    uint64_t pa = (pfn * page_sz) + (va % page_sz);
+    *pa_out = pa;
+    return 0;
+}
+// ---------- sweep + binning ----------
+struct hit {
+    uint64_t va;
+    uint64_t pa;
+    int bank_id;
+    int bg;
+    int bank;
+    int row;
+    int col;
+    int socket, imc, channel, dimm, rank;
 };
-
-// Block: Main Function (lines 1211-1452)
-// Parses arguments, initializes PCI, allocates memory, decodes addresses, handles options like touch, dump, validate, fuzz.
-
+struct vec {
+    struct hit *v;
+    size_t n, cap;
+};
+static void print_hit(const struct hit *h, const char *tag) {
+    if (tag) printf("%s", tag);
+    printf("VA=0x%016" PRIx64 " PA=0x%016" PRIx64 " s=%d imc=%d ch=%d d=%d r=%d bg=%d ba=%d bank_id=%d row=%d col=%d\n",
+           h->va, h->pa, h->socket, h->imc, h->channel, h->dimm, h->rank,
+           h->bg, h->bank, h->bank_id, h->row, h->col);
+}
+static void suggest_perf_for_hit(const struct hit *h) {
+    // Intel SKX uncore iMC banked CAS events are rank-specific:
+    // RD_CAS_RANKk.BANKx : event = 0xB0 + k, umask = x
+    // WR_CAS_RANKk.BANKx : event = 0xB8 + k, umask = x
+    // Many systems expose these via perf as raw encodings on uncore_imc_* PMUs.
+    if (h->rank < 0 || h->rank > 7 || h->bank_id < 0 || h->bank_id > 15 || h->bg < 0 || h->bg > 3) {
+        printf("Perf hint: rank/bank out of expected range; cannot suggest SKX bank events.\n");
+        return;
+    }
+    unsigned rd_evt = 0xB0u + (unsigned)h->rank;
+    unsigned wr_evt = 0xB8u + (unsigned)h->rank;
+    unsigned bank_um = (unsigned)h->bank_id;
+    unsigned bg_um = 0x11u + (unsigned)h->bg; // BANKG0..BANKG3 often map to 0x11..0x14
+    printf("\nPerf hint for this address (rank=%d bank_id=%d bg=%d ba=%d):\n",
+           h->rank, h->bank_id, h->bg, h->bank);
+    printf(" Try RD_CAS_RANK%d.BANK%d: -e 'uncore_imc_X/event=0x%02x,umask=0x%x/'\n",
+           h->rank, h->bank_id, rd_evt, bank_um);
+    printf(" Try RD_CAS_RANK%d.BANKG%d (bank-group only): -e 'uncore_imc_X/event=0x%02x,umask=0x%x/'\n",
+           h->rank, h->bg, rd_evt, bg_um);
+    printf(" (Writes) WR_CAS_RANK%d.BANK%d: -e 'uncore_imc_X/event=0x%02x,umask=0x%x/'\n",
+           h->rank, h->bank_id, wr_evt, bank_um);
+    printf(" Note: X is the uncore IMC instance. Start with X=%d (from decoder), but if counters stay low, try other uncore_imc_*.\n",
+           h->imc);
+}
+static bool decode_one_va_to_hit(uint64_t va, uint64_t pa, struct hit *out) {
+    struct decoded_addr r;
+    memset(&r, 0, sizeof(r));
+    r.addr = pa;
+    if (!skx_decode(&r)) return false;
+    out->va = va;
+    out->pa = pa;
+    out->socket = r.socket;
+    out->imc = r.imc;
+    out->channel = r.channel;
+    out->dimm = r.dimm;
+    out->rank = r.rank;
+    out->row = r.row;
+    out->col = r.column;
+    out->bg = r.bank_group;
+    out->bank = r.bank_address;
+    out->bank_id = out->bg * 4 + out->bank;
+    return true;
+}
+static void vec_push(struct vec *x, struct hit h) {
+    if (x->n == x->cap) {
+        x->cap = x->cap ? x->cap * 2 : 256;
+        x->v = (struct hit*)realloc(x->v, x->cap * sizeof(*x->v));
+        if (!x->v) die("oom");
+    }
+    x->v[x->n++] = h;
+}
+static void usage(const char *argv0) {
+    fprintf(stderr,
+        "Usage: sudo %s [--bytes N] [--step N] [--max N] [--print-per-bank N]\n"
+        " [--touch-bank N] [--touch-idx N] [--touch-iters N]\n"
+        " [--touch-va HEX] [--touch-iters N]\n"
+        " [--dump-dir DIR] [--bs-dir DIR]\n"
+        " [--validate-bank N] [--validate-iters N] [--validate-pairs N]\n"
+        " [--fuzz-bank N] [--fuzz-pairs N] [--fuzz-iters N] [--fuzz-mode double-sided] [--fuzz-data ff]\n"
+        " --bytes allocation size (default 256MiB)\n"
+        " --step stride in bytes when sampling (default 64)\n"
+        " --max max samples to collect total (default 50000)\n"
+        " --print-per-bank number of addresses to print from best bank (default 64)\n"
+        " --touch-bank after collection, select VA from bank_id (0..15)\n"
+        " --touch-idx index within that bank vector (default 0)\n"
+        " --touch-va after collection, touch the explicit VA (must be within allocation)\n"
+        " --touch-iters iterations of (clflush+load) (default 5000000; clamped for safety)\n"
+        " --dump-dir write 16 files bank_00.txt..bank_15.txt in DIR\n"
+        " --validate-bank run timing sanity-check using bank_id N (default: best bank)\n"
+        " --validate-iters inner loop iterations per pair (default 200000)\n"
+        " --validate-pairs max pairs sampled per compared bank (default 64)\n"
+        " --fuzz-bank fuzz this bank_id (default best)\n"
+        " --fuzz-pairs pairs to fuzz per bank (default 32)\n"
+        " --fuzz-iters hammer iters per pair (default 1000000; clamped)\n"
+        " --fuzz-mode one-sided|double-sided|half-double (default double-sided)\n"
+        " --fuzz-data ff|aa55 (default ff; data pattern to init buffer)\n",
+        argv0);
+}
+static inline uint64_t rdtsc_ordered(void) {
+    unsigned lo, hi;
+    __asm__ __volatile__("lfence\nrdtsc" : "=a"(lo), "=d"(hi) :: "memory");
+    return ((uint64_t)hi << 32) | lo;
+}
+static inline void clflush_one(const void *p) {
+    __asm__ __volatile__("clflush (%0)" :: "r"(p) : "memory");
+}
+static double measure_pair_cycles(volatile uint8_t *a, volatile uint8_t *b, uint64_t iters) {
+    volatile uint8_t sink = 0;
+    uint64_t total = 0;
+    for (uint64_t i = 0; i < iters; i++) {
+        clflush_one((const void *)a);
+        clflush_one((const void *)b);
+        __asm__ __volatile__("mfence" ::: "memory");
+        uint64_t t0 = rdtsc_ordered();
+        sink ^= *a;
+        sink ^= *b;
+        uint64_t t1 = rdtsc_ordered();
+        total += (t1 - t0);
+    }
+    if (sink == 0xFF) fprintf(stderr, "\n");
+    return (double)total / (double)iters;
+}
+/* ======================= BLACKSMITH OUTPUT HELPERS ======================= */
+static int ensure_dir(const char *dir)
+{
+    if (!dir || !dir[0]) return -1;
+    if (mkdir(dir, 0755) == 0) return 0;
+    if (errno == EEXIST) return 0;
+    return -1;
+}
+static uint64_t ctx_key(const struct hit *h)
+{
+    /* pack s/imc/ch/d/r into a key */
+    return ((uint64_t)h->socket << 32) |
+           ((uint64_t)h->imc << 24) |
+           ((uint64_t)h->channel << 16) |
+           ((uint64_t)h->dimm << 8) |
+           ((uint64_t)h->rank << 0);
+}
+static int cmp_u64(const void *a, const void *b)
+{
+    uint64_t x = *(const uint64_t *)a;
+    uint64_t y = *(const uint64_t *)b;
+    return (x > y) - (x < y);
+}
+static int cmp_hit_row_col(const void *a, const void *b)
+{
+    const struct hit *x = (const struct hit *)a;
+    const struct hit *y = (const struct hit *)b;
+    if (x->row != y->row) return (x->row > y->row) - (x->row < y->row);
+    if (x->col != y->col) return (x->col > y->col) - (x->col < y->col);
+    return (x->va > y->va) - (x->va < y->va);
+}
+static uint64_t most_common_ctx(const struct vec *v)
+{
+    if (v->n == 0) return 0;
+    uint64_t *keys = (uint64_t *)malloc(v->n * sizeof(uint64_t));
+    if (!keys) return 0;
+    for (size_t i = 0; i < v->n; i++) keys[i] = ctx_key(&v->v[i]);
+    qsort(keys, v->n, sizeof(uint64_t), cmp_u64);
+    uint64_t best = keys[0], cur = keys[0];
+    size_t bestc = 1, curc = 1;
+    for (size_t i = 1; i < v->n; i++) {
+        if (keys[i] == cur) {
+            curc++;
+        } else {
+            if (curc > bestc) { bestc = curc; best = cur; }
+            cur = keys[i];
+            curc = 1;
+        }
+    }
+    if (curc > bestc) { bestc = curc; best = cur; }
+    free(keys);
+    return best;
+}
+/*
+ * Write, per bank:
+ * - bank_XX_full.csv : VA,PA,s,imc,ch,d,r,bg,ba,row,col
+ * - bank_XX_va.txt : VA only (one per line) [easy to ingest elsewhere]
+ * - bank_XX_pairs.txt: VA1 VA2 (same ctx, same bank_id, different rows)
+ *
+ * The selection is filtered to the most common (s/imc/ch/d/r) context within
+ * each bank, so Blacksmith can later pick "same channel/rank/bank" candidates.
+ */
+static void write_blacksmith_outputs(const char *dir,
+                                     struct vec banks[16],
+                                     size_t per_bank,
+                                     size_t pairs_per_bank)
+{
+    if (!dir) return;
+    if (ensure_dir(dir) != 0) {
+        fprintf(stderr, "bs: could not create dir '%s': %s\n", dir, strerror(errno));
+        return;
+    }
+    for (int b = 0; b < 16; b++) {
+        struct vec *v = &banks[b];
+        if (v->n == 0) continue;
+        uint64_t best_ctx = most_common_ctx(v);
+        /* collect hits in best_ctx */
+        struct hit *tmp = (struct hit *)malloc(v->n * sizeof(struct hit));
+        if (!tmp) continue;
+        size_t tn = 0;
+        for (size_t i = 0; i < v->n; i++) {
+            if (ctx_key(&v->v[i]) == best_ctx) tmp[tn++] = v->v[i];
+        }
+        if (tn == 0) { free(tmp); continue; }
+        qsort(tmp, tn, sizeof(struct hit), cmp_hit_row_col);
+        char path_full[512], path_va[512], path_pairs[512];
+        snprintf(path_full, sizeof(path_full), "%s/bank_%02d_full.csv", dir, b);
+        snprintf(path_va, sizeof(path_va), "%s/bank_%02d_va.txt", dir, b);
+        snprintf(path_pairs,sizeof(path_pairs),"%s/bank_%02d_pairs.txt",dir, b);
+        FILE *ff = fopen(path_full, "w");
+        FILE *fv = fopen(path_va, "w");
+        FILE *fp = fopen(path_pairs,"w");
+        if (!ff || !fv || !fp) {
+            fprintf(stderr, "bs: fopen failed for bank %d (dir '%s'): %s\n", b, dir, strerror(errno));
+            if (ff) fclose(ff);
+            if (fv) fclose(fv);
+            if (fp) fclose(fp);
+            free(tmp);
+            continue;
+        }
+        fprintf(ff, "va,pa,s,imc,ch,d,r,bg,ba,row,col\n");
+        /* write up to per_bank, keeping unique rows where possible */
+        int last_row = -1;
+        size_t written = 0;
+        for (size_t i = 0; i < tn && written < per_bank; i++) {
+            const struct hit *h = &tmp[i];
+            /* prefer unique rows first */
+            if (h->row == last_row && (tn - i) > (per_bank - written)) continue;
+            fprintf(ff, "0x%016" PRIx64 ",0x%016" PRIx64 ",%u,%u,%u,%u,%u,%u,%u,%u,%u\n",
+                    h->va, h->pa, h->socket, h->imc, h->channel, h->dimm, h->rank, h->bg, h->bank, h->row, h->col);
+            fprintf(fv, "0x%016" PRIx64 "\n", h->va);
+            last_row = h->row;
+            written++;
+        }
+        /* pairs: take first VA as anchor and pair with different-row VAs */
+        const struct hit *anchor = &tmp[0];
+        size_t pairs = 0;
+        for (size_t i = 1; i < tn && pairs < pairs_per_bank; i++) {
+            if (tmp[i].row == anchor->row) continue;
+            fprintf(fp, "0x%016" PRIx64 " 0x%016" PRIx64 "\n", anchor->va, tmp[i].va);
+            pairs++;
+        }
+        fclose(ff);
+        fclose(fv);
+        fclose(fp);
+        free(tmp);
+    }
+}
+/* ===================== END BLACKSMITH OUTPUT HELPERS ===================== */
+static void dump_bank_files(const char *outdir, struct vec banks[16]) {
+    if (mkdir(outdir, 0755) != 0 && errno != EEXIST) {
+        die("mkdir(%s): %s", outdir, strerror(errno));
+    }
+    char path[512];
+    for (int b = 0; b < 16; b++) {
+        snprintf(path, sizeof(path), "%s/bank_%02d.txt", outdir, b);
+        FILE *f = fopen(path, "w");
+        if (!f) die("fopen(%s): %s", path, strerror(errno));
+        fprintf(f, "# bank_id=%d (bg=%d ba=%d) n=%zu\n", b, b/4, b%4, banks[b].n);
+        fprintf(f, "# Columns: VA PA s imc ch dimm rank bg ba row col\n");
+        for (size_t i = 0; i < banks[b].n; i++) {
+            const struct hit *h = &banks[b].v[i];
+            fprintf(f,
+                "0x%016" PRIx64 " 0x%016" PRIx64 " %d %d %d %d %d %d %d %d %d\n",
+                h->va, h->pa,
+                h->socket, h->imc, h->channel, h->dimm, h->rank,
+                h->bg, h->bank, h->row, h->col);
+        }
+        fclose(f);
+    }
+    printf("\nDumped 16 bank files to: %s/ (bank_00.txt .. bank_15.txt)\n", outdir);
+}
+static void timing_validate_bank(struct vec banks[16], int bank_id, uint64_t iters, uint64_t max_pairs) {
+    if (bank_id < 0 || bank_id > 15) {
+        warnx("validate: invalid --validate-bank %d (must be 0..15)", bank_id);
+        return;
+    }
+    if (banks[bank_id].n < 2) {
+        warnx("validate: bank_id=%d has <2 hits; increase --max/--bytes", bank_id);
+        return;
+    }
+    const struct hit *ref = &banks[bank_id].v[0];
+    unsigned ref_s = ref->socket, ref_imc = ref->imc, ref_ch = ref->channel, ref_d = ref->dimm, ref_r = ref->rank;
+    int ref_row = ref->row;
+    printf("\n=== TIMING BANK VALIDATION (bank_id=%d, iters=%" PRIu64 ", max_pairs=%" PRIu64 ") ===\n",
+           bank_id, iters, max_pairs);
+    printf("Context fixed to: s=%u imc=%u ch=%u d=%u r=%u\n", ref_s, ref_imc, ref_ch, ref_d, ref_r);
+    printf("Reference: VA=0x%016" PRIx64 " PA=0x%016" PRIx64 " row=%d col=%d\n\n",
+           ref->va, ref->pa, ref->row, ref->col);
+    for (int b = 0; b < 16; b++) {
+        uint64_t n = 0;
+        double sum = 0.0;
+        double min = 1e30, max = 0.0;
+        for (size_t i = 0; i < banks[b].n && n < max_pairs; i++) {
+            const struct hit *h = &banks[b].v[i];
+            if ((unsigned)h->socket != ref_s || (unsigned)h->imc != ref_imc || (unsigned)h->channel != ref_ch ||
+                (unsigned)h->dimm != ref_d || (unsigned)h->rank != ref_r) {
+                continue;
+            }
+            if (h->row == ref_row) continue;
+            double cyc = measure_pair_cycles((volatile uint8_t *)(uintptr_t)ref->va,
+                                             (volatile uint8_t *)(uintptr_t)h->va,
+                                             iters);
+            sum += cyc;
+            if (cyc < min) min = cyc;
+            if (cyc > max) max = cyc;
+            n++;
+        }
+        if (n == 0) {
+            printf("bank %2d: n=0 (no same-context diff-row samples)\n", b);
+        } else {
+            printf("bank %2d: n=%" PRIu64 " avg=%.1f cyc min=%.1f max=%.1f%s\n",
+                   b, n, sum / (double)n, min, max, (b == bank_id) ? " <== decoder bank" : "");
+        }
+    }
+    printf("=== END TIMING VALIDATION ===\n");
+}
+// ---------- added fuzzing logic ----------
+static void hammer_simple(uint64_t agg1_va, uint64_t victim_va, uint64_t agg2_va, uint64_t iters, const char *mode) {
+    // clamp iters for safety
+    if (iters > 10000000ULL) iters = 10000000ULL;
+    volatile uint8_t *agg1 = (volatile uint8_t *)(uintptr_t)agg1_va;
+    volatile uint8_t *agg2 = (volatile uint8_t *)(uintptr_t)agg2_va;
+    log_printf("hammering: agg1=0x%016" PRIx64 " victim=0x%016" PRIx64 " agg2=0x%016" PRIx64 " iters=%" PRIu64 " mode=%s\n",
+           agg1_va, victim_va, agg2_va, iters, mode);
+    uint8_t sink = 0;
+    const int bar_width = 50;
+    uint64_t progress_step = iters / 100; // update every 1%
+    if (progress_step == 0) progress_step = 1;
+    const int multi_hammer = 5;  // Multi-hammer: access 5x per iteration
+    if (strcmp(mode, "one-sided") == 0) {
+        // Hammer agg1 only
+        for (uint64_t i = 0; i < iters; i++) {
+            for (int m = 0; m < multi_hammer; m++) {
+                sink += *agg1;
+                do_clflush((const void *)agg1);
+            }
+            do_mfence();
+            // Replaced progress bar with blank line in log
+            log_printf("\n");
+        }
+    } else if (strcmp(mode, "double-sided") == 0) {
+        // Alternate agg1 and agg2
+        for (uint64_t i = 0; i < iters; i++) {
+            for (int m = 0; m < multi_hammer; m++) {
+                sink += *agg1;
+                do_clflush((const void *)agg1);
+                sink += *agg2;
+                do_clflush((const void *)agg2);
+            }
+            do_mfence();
+            // Replaced progress bar with blank line in log
+            log_printf("\n");
+        }
+    } else if (strcmp(mode, "half-double") == 0) {
+        // Hammer agg1 (far) more, then agg2 (near)
+        uint64_t far_iters = iters * 2 / 3;  // 2/3 on far agg
+        uint64_t near_iters = iters - far_iters;
+        for (uint64_t i = 0; i < far_iters; i++) {
+            for (int m = 0; m < multi_hammer; m++) {
+                sink += *agg1;
+                do_clflush((const void *)agg1);
+            }
+            do_mfence();
+            // Replaced progress bar with blank line in log
+            log_printf("\n");
+        }
+        for (uint64_t i = 0; i < near_iters; i++) {
+            for (int m = 0; m < multi_hammer; m++) {
+                sink += *agg2;
+                do_clflush((const void *)agg2);
+            }
+            do_mfence();
+            // Replaced progress bar with blank line in log
+            log_printf("\n");
+        }
+    }
+    log_printf("Hammering complete for this pair.\n");
+    (void)sink;
+}
+static int check_flips(uint64_t va, uint64_t size, const char *data_pattern) {
+    // Check full page (page-aligned VA)
+    uint64_t page_va = va & ~0xFFFULL;  // Align to 4KB page
+    volatile uint8_t *p = (volatile uint8_t *)(uintptr_t)page_va;
+    int flips = 0;
+    for (uint64_t off = 0; off < size; off++) {
+        uint8_t expected;
+        if (strcmp(data_pattern, "aa55") == 0) {
+            expected = (off % 2) ? 0xAA : 0x55;
+        } else {
+            expected = 0xFF;
+        }
+        if (p[off] != expected) {
+            flips++;
+            log_printf("Flip at VA=0x%016" PRIx64 " offset=%" PRIu64 ": got=0x%02x expected=0x%02x\n",
+                   page_va + off, off, p[off], expected);
+            printf("SUCCESS: Flip at VA=0x%016" PRIx64 " offset=%" PRIu64 "\n", page_va + off, off);
+        }
+    }
+    return flips;
+}
+static void fuzz_bank(struct vec *bank, uint64_t fuzz_pairs, uint64_t fuzz_iters, void *buf, uint64_t bytes, const char *mode, const char *data_pattern) {
+    int total_flips = 0;
+    int total_attempts = 0;
+    if (bank->n < 3 && strcmp(mode, "one-sided") != 0) {
+        warnx("fuzz: bank has <3 hits; skip (need agg1/victim/agg2 for %s)", mode);
+        return;
+    } else if (bank->n < 2 && strcmp(mode, "one-sided") == 0) {
+        warnx("fuzz: bank has <2 hits; skip (need agg/victim for one-sided)");
+        return;
+    }
+    // filter to most common ctx (same channel/rank etc.)
+    uint64_t best_ctx = most_common_ctx(bank);
+    struct vec filtered = {0};
+    for (size_t i = 0; i < bank->n; i++) {
+        if (ctx_key(&bank->v[i]) == best_ctx) vec_push(&filtered, bank->v[i]);
+    }
+    if (filtered.n < 3 && strcmp(mode, "one-sided") != 0) {
+        warnx("fuzz: filtered to %zu hits in common ctx; skip for %s", filtered.n, mode);
+        free(filtered.v);
+        return;
+    } else if (filtered.n < 2 && strcmp(mode, "one-sided") == 0) {
+        warnx("fuzz: filtered to %zu hits in common ctx; skip for one-sided", filtered.n);
+        free(filtered.v);
+        return;
+    }
+    // sort by row for easy neighbor selection (but we'll pick random)
+    qsort(filtered.v, filtered.n, sizeof(struct hit), cmp_hit_row_col);
+    // init memory with pattern
+    if (strcmp(data_pattern, "aa55") == 0) {
+        for (uint64_t i = 0; i < bytes; i++) {
+            ((uint8_t*)buf)[i] = (i % 2) ? 0xAA : 0x55;
+        }
+        log_printf("Initialized buffer with alternating 0xAA/0x55 pattern\n");
+    } else {
+        memset(buf, 0xFF, bytes);
+        log_printf("Initialized buffer with 0xFF pattern\n");
+    }
+    log_printf("\n=== FUZZ BANK %d (pairs=%" PRIu64 " iters=%" PRIu64 ") ctx=0x%016" PRIx64 " mode=%s data=%s ===\n",
+           filtered.v[0].bank_id, fuzz_pairs, fuzz_iters, best_ctx, mode, data_pattern);
+    // Compute and print unique rows for debugging
+    size_t unique_rows = 1;
+    for (size_t i = 1; i < filtered.n; i++) {
+        if (filtered.v[i].row != filtered.v[i-1].row) unique_rows++;
+    }
+    log_printf("fuzz: filtered n=%zu unique_rows=%zu (sorted by row/col)\n", filtered.n, unique_rows);
+    int min_hits = strcmp(mode, "one-sided") == 0 ? 2 : 3;
+    int min_unique = min_hits;
+    if (unique_rows < (size_t)min_unique) {
+        warnx("fuzz: <%d unique rows; skip (cannot form distinct sets for %s)", min_unique, mode);
+        free(filtered.v);
+        return;
+    }
+    log_printf("fuzz: first 10 rows:\n");
+    for (size_t i = 0; i < 10 && i < filtered.n; i++) {
+        log_printf("fuzz: idx%zu row=%d\n", i, filtered.v[i].row);
+    }
+    if (filtered.n > 10) {
+        log_printf("fuzz: ...\n");
+        log_printf("fuzz: last 10 rows:\n");
+        for (size_t i = filtered.n - 10; i < filtered.n; i++) {
+            log_printf("fuzz: idx%zu row=%d\n", i, filtered.v[i].row);
+        }
+    }
+    size_t attempted = 0;
+    uint64_t attempts = 0;
+    uint64_t max_attempts = fuzz_pairs * 100; // Limit retries to avoid infinite loop
+    log_printf("fuzz: starting loop (max_attempts=%" PRIu64 ")\n", max_attempts);
+    while (attempted < fuzz_pairs && filtered.n >= (size_t)min_hits) {
+        if (++attempts > max_attempts) {
+            log_printf("fuzz: exceeded max attempts %" PRIu64 ", giving up (possible lack of distinct row sets)\n", max_attempts);
+            break;
+        }
+        log_printf("fuzz: attempt %" PRIu64 " / %" PRIu64 "\n", attempts, max_attempts);
+        // Pick random distinct indices based on mode
+        size_t num_picks = strcmp(mode, "one-sided") == 0 ? 2 : 3;
+        size_t indices[3] = {0};
+        indices[0] = (size_t)rand() % filtered.n;
+        indices[1] = (size_t)rand() % filtered.n;
+        while (indices[1] == indices[0]) indices[1] = (size_t)rand() % filtered.n;
+        if (num_picks > 2) {
+            indices[2] = (size_t)rand() % filtered.n;
+            while (indices[2] == indices[0] || indices[2] == indices[1]) indices[2] = (size_t)rand() % filtered.n;
+        }
+        // Get hits and sort by row
+        struct hit *candidates[3] = {NULL, NULL, NULL};
+        for (size_t j = 0; j < num_picks; j++) {
+            candidates[j] = &filtered.v[indices[j]];
+        }
+        // Bubble sort by row
+        for (size_t j = 0; j < num_picks; j++) {
+            for (size_t k = 0; k < num_picks - 1; k++) {
+                if (candidates[k]->row > candidates[k+1]->row) {
+                    struct hit *tmp = candidates[k];
+                    candidates[k] = candidates[k+1];
+                    candidates[k+1] = tmp;
+                }
+            }
+        }
+        // Check for distinct rows
+        bool distinct = true;
+        for (size_t j = 1; j < num_picks; j++) {
+            if (candidates[j]->row <= candidates[j-1]->row) {
+                distinct = false;
+                break;
+            }
+        }
+        if (!distinct) {
+            log_printf("fuzz: skipping, not distinct rows (rows:");
+            for (size_t j = 0; j < num_picks; j++) log_printf(" %d", candidates[j]->row);
+            log_printf(")\n");
+            continue;
+        }
+        // Additional adjacency check for effectiveness
+        bool adjacent = true;
+        for (size_t j = 1; j < num_picks; j++) {
+            if (candidates[j]->row - candidates[j-1]->row != 1) adjacent = false;
+        }
+        if (!adjacent) {
+            log_printf("fuzz: skipping, not adjacent rows (rows:");
+            for (size_t j = 0; j < num_picks; j++) log_printf(" %d", candidates[j]->row);
+            log_printf(")\n");
+            continue;
+        }
+        // For half-double, ensure far/near (diff=2 for far, 1 for near)
+        if (strcmp(mode, "half-double") == 0 && (candidates[1]->row - candidates[0]->row != 2 || candidates[2]->row - candidates[1]->row != 1)) {
+            log_printf("fuzz: skipping, not half-double pattern (rows: %d %d %d)\n",
+                   candidates[0]->row, candidates[1]->row, candidates[2]->row);
+            continue;
+        }
+        struct hit *agg1 = candidates[0];
+        struct hit *victim = (num_picks == 2) ? candidates[1] : candidates[1];
+        struct hit *agg2 = (num_picks == 3) ? candidates[2] : NULL;  // NULL for one-sided
+        char agg2_va_str[32] = "N/A";
+        char agg2_row_str[16] = "N/A";
+        if (agg2) {
+            snprintf(agg2_va_str, sizeof(agg2_va_str), "0x%016" PRIx64, agg2->va);
+            snprintf(agg2_row_str, sizeof(agg2_row_str), "%d", agg2->row);
+        }
+        printf("Valid fuzz set: agg1 VA=0x%016" PRIx64 " row=%d, victim VA=0x%016" PRIx64 " row=%d, agg2 VA=%s row=%s\n",
+               agg1->va, agg1->row, victim->va, victim->row, agg2_va_str, agg2_row_str);
+        log_printf("fuzz: valid set found (rows: agg1=%d victim=%d agg2=%s)\n", agg1->row, victim->row, agg2_row_str);
+        hammer_simple(agg1->va, victim->va, agg2 ? agg2->va : 0, fuzz_iters, mode);
+        int flips = check_flips(victim->va, 4096, data_pattern);  // Check full page
+        log_printf("fuzz result: victim VA=0x%016" PRIx64 " row=%d flips=%d\n", victim->va, victim->row, flips);
+        if (flips > 0) printf("SUCCESS: bit flips detected at victim VA=0x%016" PRIx64 "!\n", victim->va);
+        attempted++;
+        total_attempts++;
+        total_flips += flips;
+        log_printf("fuzz: successful attempted %zu / %" PRIu64 "\n", attempted, fuzz_pairs);
+    }
+    free(filtered.v);
+    log_printf("=== END FUZZ ===\n");
+    log_printf("Total flips: %d\n", total_flips);
+    log_printf("Total attempts: %d\n", total_attempts);
+}
+static void fuzz_banks(struct vec banks[16], int fuzz_bank_id, uint64_t fuzz_pairs, uint64_t fuzz_iters, void *buf, uint64_t bytes, int best, const char *mode, const char *data_pattern) {
+    if (fuzz_bank_id < 0) fuzz_bank_id = best;
+    if (fuzz_bank_id < 0 || fuzz_bank_id > 15) {
+        warnx("fuzz: invalid bank %d", fuzz_bank_id);
+        return;
+    }
+    fuzz_bank(&banks[fuzz_bank_id], fuzz_pairs, fuzz_iters, buf, bytes, mode, data_pattern);
+}
 int main(int argc, char **argv) {
-    // ... (the main function as before, but now in C++ style. Add Blacksmith pattern generation in fuzz part)
-    // For example, in fuzz_bank:
-    // Create FuzzingParameterSet fps;
-    // PatternBuilder pb(pattern);
-    // pb.generate_frequency_based_pattern(fps);
-    // Then use code_jitter->jit_strict(...) with parameters
-    // Then hammer_pattern(fps)
-    // Adjust accordingly.
+    uint64_t bytes = 256ULL * 1024 * 1024;
+    uint64_t step = 64;
+    uint64_t max_samples = 50000;
+    uint64_t print_per_bank = 64;
+    bool do_touch = false;
+    int touch_bank = -1;
+    uint64_t touch_idx = 0;
+    uint64_t touch_va = 0;
+    uint64_t touch_iters = 5000000;
+    const char *dump_dir = NULL;
+    const char *bs_dir = NULL;
+    size_t bs_per_bank = 1024;
+    size_t bs_pairs = 256;
+    bool do_validate = false;
+    int validate_bank = -1;
+    uint64_t validate_iters = 200000;
+    uint64_t validate_pairs = 64;
+    bool touch_scan = false;
+    int touch_cpu = 0;
+    int fuzz_bank = -1;
+    uint64_t fuzz_pairs = 32;
+    uint64_t fuzz_iters = 1000000;
+    const char *fuzz_mode = "double-sided";  // New: default mode
+    const char *fuzz_data = "ff";  // New: default data pattern
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "--bytes") && i+1 < argc) {
+            bytes = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--step") && i+1 < argc) {
+            step = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--max") && i+1 < argc) {
+            max_samples = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--print-per-bank") && i+1 < argc) {
+            print_per_bank = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--touch-bank") && i+1 < argc) {
+            do_touch = true;
+            touch_bank = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--touch-idx") && i+1 < argc) {
+            do_touch = true;
+            touch_idx = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--touch-va") && i+1 < argc) {
+            do_touch = true;
+            touch_va = strtoull(argv[++i], NULL, 0);
+            touch_bank = -1;
+        } else if (!strcmp(argv[i], "--touch-iters") && i+1 < argc) {
+            touch_iters = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--dump-dir") && i+1 < argc) {
+            dump_dir = argv[++i];
+        } else if (!strcmp(argv[i], "--bs-dir") && i+1 < argc) {
+            bs_dir = argv[++i];
+        } else if (!strcmp(argv[i], "--bs-per-bank") && i+1 < argc) {
+            bs_per_bank = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--bs-pairs") && i+1 < argc) {
+            bs_pairs = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--validate-bank") && i+1 < argc) {
+            do_validate = true;
+            validate_bank = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--validate-iters") && i+1 < argc) {
+            do_validate = true;
+            validate_iters = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--validate-pairs") && i+1 < argc) {
+            do_validate = true;
+            validate_pairs = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--touch-scan")) {
+            do_touch = true;
+            touch_scan = true;
+        } else if (!strcmp(argv[i], "--touch-cpu") && i+1 < argc) {
+            touch_cpu = (int)strtoul(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--fuzz-bank") && i+1 < argc) {
+            fuzz_bank = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "--fuzz-pairs") && i+1 < argc) {
+            fuzz_pairs = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--fuzz-iters") && i+1 < argc) {
+            fuzz_iters = strtoull(argv[++i], NULL, 0);
+        } else if (!strcmp(argv[i], "--fuzz-mode") && i+1 < argc) {
+            fuzz_mode = argv[++i];
+            if (strcmp(fuzz_mode, "one-sided") != 0 && strcmp(fuzz_mode, "double-sided") != 0 && strcmp(fuzz_mode, "half-double") != 0) {
+                warnx("Invalid --fuzz-mode '%s'; must be one-sided, double-sided, or half-double", fuzz_mode);
+                return 2;
+            }
+        } else if (!strcmp(argv[i], "--fuzz-data") && i+1 < argc) {
+            fuzz_data = argv[++i];
+            if (strcmp(fuzz_data, "ff") != 0 && strcmp(fuzz_data, "aa55") != 0) {
+                warnx("Invalid --fuzz-data '%s'; must be ff or aa55", fuzz_data);
+                return 2;
+            }
+        } else {
+            usage(argv[0]);
+            return 2;
+        }
+    }
+    (void)touch_scan;
+    (void)touch_cpu;
+    // Open log file
+    log_fp = fopen("skx_fuzz.log", "w");
+    if (!log_fp) die("fopen skx_fuzz.log: %s", strerror(errno));
+    srand(time(NULL)); // for random pair selection in fuzz
+    size_t nents = 0;
+    struct pci_ent *ents = scan_pci(&nents);
+    if (skx_get_hi_lo_from_2034(ents, nents) != 0)
+        die("failed to read TOLM/TOHM (need 8086:2034 accessible)");
+    int ns = get_all_bus_mappings(ents, nents);
+    if (ns <= 0) die("no 8086:2016 sockets found (not SKX?)");
+    get_all_munits_and_open(ents, nents);
+    skx_load_dimm_params();
+    // Assign MC numbering
+    uint8_t mcnum = 0;
+    for (struct skx_dev *d = skx_devs; d; d = d->next) {
+        for (int mc = 0; mc < NUM_IMC; mc++) {
+            d->imc[mc].mc = mcnum++;
+        }
+    }
+    // Allocate with huge pages
+    const size_t huge_page_size = 2ULL * 1024 * 1024; // 2MB
+    // Round bytes up to multiple of huge_page_size
+    if (bytes % huge_page_size != 0) {
+        bytes = ((bytes / huge_page_size) + 1) * huge_page_size;
+        printf("Rounded allocation size up to %" PRIu64 " bytes (multiple of 2MB huge page)\n", bytes);
+    }
+    void *buf = mmap(NULL, (size_t)bytes, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+    if (buf == MAP_FAILED) die("mmap with huge pages failed: %s (check vm.nr_hugepages?)", strerror(errno));
 
-    // The rest of the main remains the same, but convert C structs to C++ if needed (e.g., use std::vector for vec).
-    // For simplicity, keep as is since C structs work in C++.
-
-    // To execute the code:
-    // g++ -O2 -Wall -Wextra -std=c++11 -o skx_fuzz skx_fuzz.cpp -lasmjit
-    // sudo ./skx_fuzz [options]
+    // Touch pages to ensure mapping (step by huge page size)
+    volatile uint8_t *p = (volatile uint8_t *)buf;
+    for (uint64_t off = 0; off < bytes; off += huge_page_size) {
+        p[off] ^= 0xA5;
+    }
+    // Optional: keep in RAM (best effort)
+    (void)mlock(buf, (size_t)bytes);
+    struct vec banks[16] = {0};
+    uint64_t collected = 0;
+    for (uint64_t off = 0; off + step <= bytes && collected < max_samples; off += step) {
+        uint64_t va = (uint64_t)((uintptr_t)buf + (uintptr_t)off);
+        uint64_t pa = 0;
+        int prc = va_to_pa(va, &pa);
+        if (prc != 0) continue;
+        struct decoded_addr da;
+        memset(&da, 0, sizeof(da));
+        da.addr = pa;
+        if (!skx_decode(&da)) continue;
+        int bg = da.bank_group & 3;
+        int bank = da.bank_address & 3;
+        int bank_id = (bg * 4) + bank;
+        if (bank_id < 0 || bank_id > 15) continue;
+        struct hit h;
+        memset(&h, 0, sizeof(h));
+        h.va = va;
+        h.pa = pa;
+        h.bank_id = bank_id;
+        h.bg = bg;
+        h.bank = bank;
+        h.row = da.row;
+        h.col = da.column;
+        h.socket = da.socket;
+        h.imc = da.imc;
+        h.channel = da.channel;
+        h.dimm = da.dimm;
+        h.rank = da.rank;
+        vec_push(&banks[bank_id], h);
+        collected++;
+    }
+    // Summary
+    printf("TOLM=0x%llx TOHM=0x%llx\n",
+           (unsigned long long)skx_tolm, (unsigned long long)skx_tohm);
+    printf("Collected %" PRIu64 " decoded addresses from allocation %p (%" PRIu64 " bytes)\n",
+           collected, buf, bytes);
+    int best = -1;
+    size_t best_n = 0;
+    for (int b = 0; b < 16; b++) {
+        printf("bank_id=%2d (bg=%d bank=%d): %zu\n", b, b/4, b%4, banks[b].n);
+        if (banks[b].n > best_n) {
+            best_n = banks[b].n;
+            best = b;
+        }
+    }
+    if (best < 0 || best_n == 0) {
+        printf("No addresses decoded. Likely missing PCI funcs or decode tables not matched.\n");
+        return 1;
+    }
+    printf("\nBest bank_id=%d (bg=%d bank=%d) hits=%zu\n", best, best/4, best%4, best_n);
+    printf("Sample addresses (VA, PA, socket/imc/ch, dimm/rank, row, col):\n");
+    size_t to_print = banks[best].n < print_per_bank ? banks[best].n : (size_t)print_per_bank;
+    for (size_t i = 0; i < to_print; i++) {
+        print_hit(&banks[best].v[i], NULL);
+    }
+    if (do_touch) {
+        uint64_t va = touch_va;
+        if (touch_bank >= 0) {
+            if (touch_bank < 0 || touch_bank > 15) {
+                warnx("touch: invalid --touch-bank %d (must be 0..15)", touch_bank);
+                return 2;
+            }
+            if (banks[touch_bank].n == 0) {
+                warnx("touch: bank_id=%d has zero hits; choose another bank_id or increase --max/--bytes", touch_bank);
+                return 1;
+            }
+            if (touch_idx >= banks[touch_bank].n) {
+                warnx("touch: --touch-idx %" PRIu64 " out of range (bank has %zu entries)",
+                      touch_idx, banks[touch_bank].n);
+                return 1;
+            }
+            va = banks[touch_bank].v[touch_idx].va;
+            printf("\nTouch selected from bank_id=%d (bg=%d bank=%d) idx=%" PRIu64 " => VA=0x%016" PRIx64 "\n",
+                   touch_bank, touch_bank/4, touch_bank%4, touch_idx, va);
+        } else {
+            if (va == 0) {
+                warnx("touch: specify --touch-bank or --touch-va");
+                return 2;
+            }
+            printf("\nTouch using explicit VA=0x%016" PRIx64 "\n", va);
+            // Attempt to decode this VA (if it resolves to a PA).
+            uint64_t pa_tmp = 0;
+            struct hit tmp;
+            memset(&tmp, 0, sizeof(tmp));
+            if (va_to_pa(va, &pa_tmp) == 0 && decode_one_va_to_hit(va, pa_tmp, &tmp)) {
+                print_hit(&tmp, "Touch entry: ");
+                suggest_perf_for_hit(&tmp);
+            } else {
+                printf("Touch entry: (decode failed for this VA; will still touch if within allocation)\n");
+            }
+        }
+        // Guard: VA must be inside our allocation.
+        uint64_t base = (uint64_t)(uintptr_t)buf;
+        uint64_t end = base + bytes;
+        if (va < base || va >= end) {
+            warnx("touch: VA=0x%016" PRIx64 " not within allocation [%p, %p). Refusing to touch.",
+                  va, buf, (void *)(uintptr_t)end);
+            return 1;
+        }
+        touch_one_va(va, touch_iters);
+    }
+    if (dump_dir) {
+        dump_bank_files(dump_dir, banks);
+    }
+    if (bs_dir) {
+        write_blacksmith_outputs(bs_dir, banks, bs_per_bank, bs_pairs);
+    }
+    if (do_validate) {
+        if (validate_bank < 0) validate_bank = best;
+        timing_validate_bank(banks, validate_bank, validate_iters, validate_pairs);
+    }
+    if (fuzz_pairs > 0) {
+        fuzz_banks(banks, fuzz_bank, fuzz_pairs, fuzz_iters, buf, bytes, best, fuzz_mode, fuzz_data);
+    }
+    // cleanup
+    for (int b = 0; b < 16; b++) free(banks[b].v);
+    free(ents);
+    munmap(buf, (size_t)bytes); // Clean up mmap
+    if (log_fp) fclose(log_fp);
     return 0;
 }
